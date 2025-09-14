@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test - Central Command API</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .response-data {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>CORS Test for Central Command API</h1>
+
+    <div class="test-section">
+        <h2>Test Configuration</h2>
+        <p><strong>API URL:</strong> <span id="apiUrl">http://localhost:5000</span></p>
+        <p><strong>Current Origin:</strong> <span id="currentOrigin"></span></p>
+        <p><strong>Test Port:</strong>
+            <input type="number" id="testPort" value="5175" min="3000" max="9999" style="width: 80px;">
+            <button onclick="updateTestOrigin()">Update Origin</button>
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>API Tests</h2>
+        <button onclick="testBasicCORS()">Test Basic CORS</button>
+        <button onclick="testWithCredentials()">Test With Credentials</button>
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        // Display current origin
+        document.getElementById('currentOrigin').textContent = window.location.origin;
+
+        const API_BASE = 'http://localhost:5000';
+
+        function updateTestOrigin() {
+            const port = document.getElementById('testPort').value;
+            window.location.port = port;
+        }
+
+        function addResult(test, status, message, data = null) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${status}`;
+
+            let html = `<strong>${test}:</strong> ${message}`;
+            if (data) {
+                html += `<div class="response-data"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+            }
+            resultDiv.innerHTML = html;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+        }
+
+        async function testBasicCORS() {
+            clearResults();
+            addResult('Basic CORS Test', 'pending', 'Testing without credentials...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/portals`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'omit' // No credentials
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('Basic CORS Test', 'success',
+                        `Success! Status: ${response.status}. Retrieved ${data.items?.length || 0} portals.`,
+                        data.items?.slice(0, 2) // Show first 2 items
+                    );
+                } else {
+                    addResult('Basic CORS Test', 'error',
+                        `Failed with status: ${response.status} - ${response.statusText}`
+                    );
+                }
+            } catch (error) {
+                addResult('Basic CORS Test', 'error', `CORS Error: ${error.message}`);
+            }
+        }
+
+        async function testWithCredentials() {
+            clearResults();
+            addResult('Credentials Test', 'pending', 'Testing with credentials...');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/portals`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include' // Include credentials
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('Credentials Test', 'success',
+                        `Success with credentials! Status: ${response.status}. Retrieved ${data.items?.length || 0} portals.`,
+                        data.items?.slice(0, 2)
+                    );
+                } else {
+                    addResult('Credentials Test', 'error',
+                        `Failed with status: ${response.status} - ${response.statusText}`
+                    );
+                }
+            } catch (error) {
+                addResult('Credentials Test', 'error', `CORS Error: ${error.message}`);
+            }
+        }
+
+        async function testEndpoint(endpoint, method = 'GET') {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`${method} ${endpoint}`, 'success',
+                        `Status: ${response.status}`,
+                        data
+                    );
+                } else {
+                    addResult(`${method} ${endpoint}`, 'error',
+                        `Status: ${response.status} - ${response.statusText}`
+                    );
+                }
+            } catch (error) {
+                addResult(`${method} ${endpoint}`, 'error', `Error: ${error.message}`);
+            }
+        }
+
+        async function testAllEndpoints() {
+            clearResults();
+            addResult('Testing All Endpoints', 'pending', 'Running comprehensive tests...');
+
+            const endpoints = [
+                '/api/v1/portals',
+                '/api/v1/incidents',
+                '/api/v1/statistics',
+                '/api/v1/statistics/sparklines',
+                '/health'
+            ];
+
+            for (const endpoint of endpoints) {
+                await testEndpoint(endpoint);
+                // Add small delay between requests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Test SignalR negotiation
+            try {
+                const response = await fetch(`${API_BASE}/hubs/metrics/negotiate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('SignalR Negotiate', 'success',
+                        'SignalR negotiation successful',
+                        data
+                    );
+                } else {
+                    addResult('SignalR Negotiate', 'error',
+                        `Status: ${response.status} - ${response.statusText}`
+                    );
+                }
+            } catch (error) {
+                addResult('SignalR Negotiate', 'error', `Error: ${error.message}`);
+            }
+        }
+
+        // Auto-run basic test on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testWithCredentials();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

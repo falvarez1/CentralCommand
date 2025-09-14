@@ -1,0 +1,242 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run Playwright tests
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results-${{ matrix.node-version }}-${{ matrix.browser }}
+          path: test-results/
+          retention-days: 30
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.node-version }}-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 30
+
+  visual-regression:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run visual regression tests
+        run: npm run test:visual
+
+      - name: Upload visual diff artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-diffs
+          path: test-results/**/*.png
+          retention-days: 30
+
+  e2e:
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: test-results/
+          retention-days: 30
+
+      - name: Upload E2E videos
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-videos
+          path: test-results/**/*.webm
+          retention-days: 7
+
+  comparison:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    needs: [test, visual-regression, e2e]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run comparison tests
+        run: npm run test:comparison
+
+      - name: Upload comparison screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comparison-screenshots
+          path: test-results/comparison/*.png
+          retention-days: 30
+
+  publish-report:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs: [visual-regression, e2e, comparison]
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Merge test reports
+        run: |
+          mkdir -p merged-report
+          cp -r playwright-report-*/* merged-report/ 2>/dev/null || true
+          cp -r e2e-results/* merged-report/ 2>/dev/null || true
+          cp -r visual-regression-diffs/* merged-report/ 2>/dev/null || true
+          cp -r comparison-screenshots/* merged-report/ 2>/dev/null || true
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./merged-report
+          destination_dir: playwright-report
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Read test results
+            let summary = '## Playwright Test Results\n\n';
+
+            // Add test status
+            const testsPassed = !${{ contains(needs.*.result, 'failure') }};
+            summary += testsPassed
+              ? '✅ All tests passed!\n\n'
+              : '❌ Some tests failed. Check the artifacts for details.\n\n';
+
+            // Add links to artifacts
+            summary += '### Artifacts\n';
+            summary += '- [Test Reports](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n';
+
+            if (!testsPassed) {
+              summary += '- [Visual Regression Diffs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n';
+              summary += '- [E2E Videos](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n';
+            }
+
+            // Comment on PR
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [test, visual-regression, e2e, comparison]
+    if: failure()
+
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "Tests failed! Check the GitHub Actions logs for details."
+          # Add your notification service here (Slack, Discord, email, etc.)

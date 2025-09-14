@@ -1,0 +1,53 @@
+{
+  "name": "central-command",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Central Command - Enterprise Portal Management System",
+  "author": "Central Command Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "cd apps/api/CentralCommand.MockApi && dotnet run",
+    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
+    "build": "npm run build:web",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "cd apps/api/CentralCommand.MockApi && dotnet build",
+    "build:all": "npm run build:web && npm run build:api",
+    "test": "npm run test --workspace=apps/web",
+    "test:e2e": "npm run test:e2e --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/web",
+    "clean": "npm run clean --workspaces --if-present && rimraf node_modules",
+    "install:all": "npm install && cd apps/api/CentralCommand.MockApi && dotnet restore",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .gitignore",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^9.0.11",
+    "prettier": "^3.2.5",
+    "rimraf": "^5.0.5",
+    "turbo": "^1.13.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/central-command.git"
+  },
+  "keywords": [
+    "portal",
+    "management",
+    "monitoring",
+    "dashboard",
+    "react",
+    "dotnet",
+    "enterprise"
+  ]
+}
