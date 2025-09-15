@@ -14,7 +14,7 @@ import {
 interface PortalListProps {
   portals: Portal[]
   onPortalClick?: (portal: Portal) => void
-  onFavoriteClick?: (id: number) => void
+  onFavoriteClick?: (id: string) => void
   className?: string
 }
 
@@ -58,7 +58,7 @@ export const PortalList: React.FC<PortalListProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold truncate">{portal.name}</h3>
-                {portal.favorited && (
+                {portal.isFavorite && (
                   <Heart className="h-3 w-3 fill-current text-red-500" />
                 )}
               </div>
@@ -70,19 +70,19 @@ export const PortalList: React.FC<PortalListProps> = ({
           <div className="hidden md:flex items-center gap-6 px-4">
             <div className="text-sm">
               <span className="text-muted-foreground">Response: </span>
-              <span className="font-mono font-medium">{portal.responseTime}ms</span>
+              <span className="font-mono font-medium">{portal.metrics?.responseTime || 0}ms</span>
             </div>
             <div className="text-sm">
               <span className="text-muted-foreground">Uptime: </span>
-              <span className="font-mono font-medium">{portal.uptime}%</span>
+              <span className="font-mono font-medium">{portal.metrics?.uptime?.toFixed(2) || 0}%</span>
             </div>
             <div className="text-sm">
               <span className="text-muted-foreground">CPU: </span>
-              <span className="font-mono font-medium">{portal.cpu}%</span>
+              <span className="font-mono font-medium">{portal.metrics?.cpu?.toFixed(1) || 0}%</span>
             </div>
             <div className="text-sm">
               <span className="text-muted-foreground">Memory: </span>
-              <span className="font-mono font-medium">{portal.memory}%</span>
+              <span className="font-mono font-medium">{portal.metrics?.memory?.toFixed(1) || 0}%</span>
             </div>
           </div>
 
@@ -103,7 +103,7 @@ export const PortalList: React.FC<PortalListProps> = ({
                 onFavoriteClick?.(portal.id)
               }}
             >
-              <Heart className={`h-4 w-4 ${portal.favorited ? 'fill-current text-red-500' : ''}`} />
+              <Heart className={`h-4 w-4 ${portal.isFavorite ? 'fill-current text-red-500' : ''}`} />
             </Button>
             <Button
               variant="ghost"
@@ -147,7 +147,7 @@ export const PortalList: React.FC<PortalListProps> = ({
                   onFavoriteClick?.(portal.id)
                 }}>
                   <Heart className="h-4 w-4 mr-2" />
-                  {portal.favorited ? 'Remove from Favorites' : 'Add to Favorites'}
+                  {portal.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

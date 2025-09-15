@@ -3,13 +3,14 @@
  * Provides the overall structure with header, sidebar, and main content area
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Outlet } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Portal } from '@/types';
+import { usePortalStore } from '@/stores/usePortalStore';
 
 interface AppLayoutProps {
   children?: React.ReactNode;
@@ -19,7 +20,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [favorites, setFavorites] = useState<Portal[]>([]);
+  const { portals } = usePortalStore();
+
+  // Filter favorited portals
+  const favorites = useMemo(() => {
+    return portals.filter(portal => portal.isFavorite);
+  }, [portals]);
 
   // Auto-hide sidebar on mobile
   useEffect(() => {
@@ -36,11 +42,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } else {
       setIsSidebarCollapsed(!isSidebarCollapsed);
     }
-  };
-
-  const handleToggleFavorite = (portalId: number) => {
-    // This will be connected to global state management later
-    console.log('Toggle favorite:', portalId);
   };
 
   return (

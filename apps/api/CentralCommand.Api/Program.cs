@@ -1,3 +1,4 @@
+using CentralCommand.Api.Configuration;
 using CentralCommand.Api.Data;
 using CentralCommand.Api.Data.Entities;
 using CentralCommand.Api.Hubs;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Supabase;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -34,8 +36,42 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
+// Configure Supabase settings
+builder.Services.Configure<SupabaseSettings>(builder.Configuration.GetSection("Supabase"));
+var supabaseSettings = builder.Configuration.GetSection("Supabase").Get<SupabaseSettings>() ?? new SupabaseSettings();
+
+// Configure Supabase client
+if (!string.IsNullOrEmpty(supabaseSettings.Url) && !string.IsNullOrEmpty(supabaseSettings.AnonKey))
+{
+    builder.Services.AddSingleton(provider =>
+    {
+        var options = new SupabaseOptions
+        {
+            AutoRefreshToken = true,
+            AutoConnectRealtime = supabaseSettings.EnableRealtime
+        };
+
+        // Use service role key if available for server-side operations
+        var key = !string.IsNullOrEmpty(supabaseSettings.ServiceRoleKey)
+            ? supabaseSettings.ServiceRoleKey
+            : supabaseSettings.AnonKey;
+
+        return new Supabase.Client(supabaseSettings.Url, key, options);
+    });
+
+    // Register Supabase Auth Service
+    builder.Services.AddScoped<ISupabaseAuthService, SupabaseAuthService>();
+}
+
 // Configure connection string from environment variables or configuration
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING");
+
+// Use Supabase connection string if available and Supabase is enabled
+if (string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(supabaseSettings.ConnectionString))
+{
+    connectionString = supabaseSettings.ConnectionString;
+}
+
 if (string.IsNullOrEmpty(connectionString))
 {
     // Build connection string from individual components
@@ -215,9 +251,9 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Central Command Mock API",
+        Title = "Central Command API",
         Version = "v1",
-        Description = "Mock API for Central Command portal management system with authentication"
+        Description = "Production API for Central Command portal management system with authentication"
     });
 
     // Add JWT authentication to Swagger
@@ -288,9 +324,7 @@ builder.Services.AddCors(options =>
 });
 
 // Register application services
-builder.Services.AddSingleton<MockDataService>();
-builder.Services.AddSingleton<StatisticsService>();
-builder.Services.AddHostedService<MetricsUpdateService>();
+builder.Services.AddScoped<StatisticsService>();
 builder.Services.AddHostedService<TokenCleanupService>();
 
 // Add health checks
@@ -310,7 +344,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Central Command Mock API v1");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Central Command API v1");
         options.RoutePrefix = string.Empty; // Serve Swagger UI at root
     });
 }
@@ -376,7 +410,7 @@ app.MapHealthChecks("/health");
 // Add a simple root endpoint
 app.MapGet("/", () => Results.Json(new
 {
-    name = "Central Command Mock API",
+    name = "Central Command API",
     version = "1.0.0",
     status = "operational",
     documentation = "/swagger",
@@ -399,7 +433,7 @@ app.MapGet("/", () => Results.Json(new
 
 // Log startup information
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("Central Command Mock API starting...");
+logger.LogInformation("Central Command API starting...");
 logger.LogInformation($"Environment: {app.Environment.EnvironmentName}");
 logger.LogInformation("CORS enabled for: http://localhost:* (any port)");
 logger.LogInformation("SignalR hub available at: /hubs/metrics");
@@ -433,10 +467,7 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// Initialize mock data
-var mockDataService = app.Services.GetRequiredService<MockDataService>();
-var portals = mockDataService.GetPortals();
-var incidents = mockDataService.GetIncidents();
-logger.LogInformation($"Initialized with {portals.Count} portals and {incidents.Count} incidents");
+// Ready to serve requests
+logger.LogInformation("API is ready to handle requests");
 
 app.Run();

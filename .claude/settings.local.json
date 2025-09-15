@@ -4,7 +4,9 @@
       "Bash(dir:*)",
       "mcp__context7__resolve-library-id",
       "Bash(curl:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "WebSearch",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": []

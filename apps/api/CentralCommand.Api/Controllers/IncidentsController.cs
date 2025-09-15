@@ -1,6 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CentralCommand.Api.Models;
-using CentralCommand.Api.Services;
 
 namespace CentralCommand.Api.Controllers;
 
@@ -9,19 +9,13 @@ namespace CentralCommand.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
+[Authorize]
 public class IncidentsController : ControllerBase
 {
-    private readonly MockDataService _mockDataService;
-    private readonly StatisticsService _statisticsService;
     private readonly ILogger<IncidentsController> _logger;
 
-    public IncidentsController(
-        MockDataService mockDataService,
-        StatisticsService statisticsService,
-        ILogger<IncidentsController> logger)
+    public IncidentsController(ILogger<IncidentsController> logger)
     {
-        _mockDataService = mockDataService;
-        _statisticsService = statisticsService;
         _logger = logger;
     }
 
@@ -29,6 +23,7 @@ public class IncidentsController : ControllerBase
     /// Get all incidents with optional filtering
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<List<Incident>>> GetIncidents(
         [FromQuery] string? status = null,
         [FromQuery] string? severity = null,
@@ -38,54 +33,13 @@ public class IncidentsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var incidents = _mockDataService.GetIncidents();
+        // TODO: Implement with Entity Framework and repository pattern
+        _logger.LogInformation("Getting incidents with filters");
 
-        // Apply filters
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<IncidentStatus>(status, true, out var stat))
-        {
-            incidents = incidents.Where(i => i.Status == stat).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(severity) && Enum.TryParse<IncidentSeverity>(severity, true, out var sev))
-        {
-            incidents = incidents.Where(i => i.Severity == sev).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(type) && Enum.TryParse<IncidentType>(type, true, out var typ))
-        {
-            incidents = incidents.Where(i => i.Type == typ).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(searchTerm))
-        {
-            var searchLower = searchTerm.ToLower();
-            incidents = incidents.Where(i =>
-                i.Title.ToLower().Contains(searchLower) ||
-                i.Description.ToLower().Contains(searchLower) ||
-                i.Tags.Any(t => t.ToLower().Contains(searchLower))
-            ).ToList();
-        }
-
-        if (isUnresolved.HasValue && isUnresolved.Value)
-        {
-            incidents = incidents.Where(i => i.Status != IncidentStatus.Resolved && i.Status != IncidentStatus.Closed).ToList();
-        }
-
-        // Order by creation date (newest first)
-        incidents = incidents.OrderByDescending(i => i.CreatedAt).ToList();
-
-        // Apply pagination
-        var totalItems = incidents.Count;
-        var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-        var paginatedIncidents = incidents
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        var response = new ApiResponse<List<Incident>>
+        return Ok(new ApiResponse<List<Incident>>
         {
             Status = ApiStatus.Success,
-            Data = paginatedIncidents,
+            Data = new List<Incident>(),
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -94,43 +48,34 @@ public class IncidentsController : ControllerBase
                 {
                     Page = page,
                     PageSize = pageSize,
-                    TotalPages = totalPages,
-                    TotalItems = totalItems,
-                    HasNext = page < totalPages,
-                    HasPrevious = page > 1
+                    TotalPages = 0,
+                    TotalItems = 0,
+                    HasNext = false,
+                    HasPrevious = false
                 }
             }
-        };
-
-        return Ok(response);
+        });
     }
 
     /// <summary>
     /// Get a specific incident by ID
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<Incident>> GetIncident(Guid id)
     {
-        var incident = _mockDataService.GetIncident(id);
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Getting incident {id}");
 
-        if (incident == null)
+        return NotFound(new ApiResponse<Incident>
         {
-            return NotFound(new ApiResponse<Incident>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        return Ok(new ApiResponse<Incident>
-        {
-            Status = ApiStatus.Success,
-            Data = incident,
+                Code = "404",
+                Message = $"Incident {id} not found",
+                Details = "This endpoint requires database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -143,110 +88,21 @@ public class IncidentsController : ControllerBase
     /// Create a new incident
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = "RequireDeveloper")]
     public ActionResult<ApiResponse<Incident>> CreateIncident([FromBody] CreateIncidentRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Title))
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation("Creating new incident");
+
+        return StatusCode(501, new ApiResponse<Incident>
         {
-            return BadRequest(new ApiResponse<Incident>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.ValidationError,
-                    Message = "Title is required",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        var incident = _mockDataService.AddIncident(request);
-
-        _logger.LogInformation($"Created new incident: {incident.Id} - {incident.Title}");
-
-        return CreatedAtAction(
-            nameof(GetIncident),
-            new { id = incident.Id },
-            new ApiResponse<Incident>
-            {
-                Status = ApiStatus.Success,
-                Data = incident,
-                Metadata = new ApiMetadata
-                {
-                    Timestamp = DateTime.UtcNow,
-                    RequestId = Guid.NewGuid().ToString()
-                }
-            });
-    }
-
-    /// <summary>
-    /// Update an existing incident
-    /// </summary>
-    [HttpPut("{id}")]
-    public ActionResult<ApiResponse<Incident>> UpdateIncident(Guid id, [FromBody] UpdateIncidentRequest request)
-    {
-        var incident = _mockDataService.GetIncident(id);
-
-        if (incident == null)
-        {
-            return NotFound(new ApiResponse<Incident>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        // Update incident properties
-        if (!string.IsNullOrEmpty(request.Title))
-            incident.Title = request.Title;
-
-        if (!string.IsNullOrEmpty(request.Description))
-            incident.Description = request.Description;
-
-        if (request.Status.HasValue)
-        {
-            incident.Status = request.Status.Value;
-            incident.Timeline.Add(new TimelineEntry
-            {
-                Id = Guid.NewGuid(),
-                Timestamp = DateTime.UtcNow,
-                Action = $"Status changed to {request.Status.Value}",
-                Description = "Status update via API",
-                PerformedBy = Guid.NewGuid()
-            });
-
-            if (request.Status.Value == IncidentStatus.Resolved)
-            {
-                incident.ResolvedAt = DateTime.UtcNow;
-            }
-        }
-
-        if (request.Severity.HasValue)
-            incident.Severity = request.Severity.Value;
-
-        if (request.Assignee.HasValue)
-            incident.Assignee = request.Assignee.Value;
-
-        if (!string.IsNullOrEmpty(request.Resolution))
-            incident.Resolution = request.Resolution;
-
-        if (!string.IsNullOrEmpty(request.RootCause))
-            incident.RootCause = request.RootCause;
-
-        incident.UpdatedAt = DateTime.UtcNow;
-        incident.UpdatedBy = Guid.NewGuid();
-        incident.ETag = GenerateETag();
-
-        _logger.LogInformation($"Updated incident: {incident.Id}");
-
-        return Ok(new ApiResponse<Incident>
-        {
-            Status = ApiStatus.Success,
-            Data = incident,
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Incident creation requires database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -256,17 +112,51 @@ public class IncidentsController : ControllerBase
     }
 
     /// <summary>
-    /// Get incident statistics
+    /// Update an existing incident
     /// </summary>
-    [HttpGet("stats")]
-    public ActionResult<ApiResponse<IncidentStats>> GetIncidentStats()
+    [HttpPut("{id}")]
+    [Authorize(Policy = "RequireDeveloper")]
+    public ActionResult<ApiResponse<Incident>> UpdateIncident(Guid id, [FromBody] UpdateIncidentRequest request)
     {
-        var stats = _statisticsService.GetIncidentStats();
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Updating incident {id}");
 
-        return Ok(new ApiResponse<IncidentStats>
+        return StatusCode(501, new ApiResponse<Incident>
         {
-            Status = ApiStatus.Success,
-            Data = stats,
+            Status = ApiStatus.Error,
+            Error = new ApiError
+            {
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Incident update requires database implementation"
+            },
+            Metadata = new ApiMetadata
+            {
+                Timestamp = DateTime.UtcNow,
+                RequestId = Guid.NewGuid().ToString()
+            }
+        });
+    }
+
+    /// <summary>
+    /// Resolve an incident
+    /// </summary>
+    [HttpPost("{id}/resolve")]
+    [Authorize(Policy = "RequireDeveloper")]
+    public ActionResult<ApiResponse<Incident>> ResolveIncident(Guid id, [FromBody] ResolveIncidentRequest request)
+    {
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Resolving incident {id}");
+
+        return StatusCode(501, new ApiResponse<Incident>
+        {
+            Status = ApiStatus.Error,
+            Error = new ApiError
+            {
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Incident resolution requires database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -279,32 +169,16 @@ public class IncidentsController : ControllerBase
     /// Get comments for an incident
     /// </summary>
     [HttpGet("{id}/comments")]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<List<Comment>>> GetIncidentComments(Guid id)
     {
-        var incident = _mockDataService.GetIncident(id);
-
-        if (incident == null)
-        {
-            return NotFound(new ApiResponse<List<Comment>>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        var comments = _mockDataService.GetIncidentComments(id);
-
-        _logger.LogInformation($"Retrieved {comments.Count} comments for incident {id}");
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Getting comments for incident {id}");
 
         return Ok(new ApiResponse<List<Comment>>
         {
             Status = ApiStatus.Success,
-            Data = comments,
+            Data = new List<Comment>(),
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -317,84 +191,112 @@ public class IncidentsController : ControllerBase
     /// Add a comment to an incident
     /// </summary>
     [HttpPost("{id}/comments")]
-    public ActionResult<ApiResponse<Comment>> AddIncidentComment(Guid id, [FromBody] CreateCommentRequest request)
+    [Authorize(Policy = "RequireDeveloper")]
+    public ActionResult<ApiResponse<Comment>> AddComment(Guid id, [FromBody] CreateCommentRequest request)
     {
-        var incident = _mockDataService.GetIncident(id);
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Adding comment to incident {id}");
 
-        if (incident == null)
+        return StatusCode(501, new ApiResponse<Comment>
         {
-            return NotFound(new ApiResponse<Comment>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Content))
-        {
-            return BadRequest(new ApiResponse<Comment>
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Comment creation requires database implementation"
+            },
+            Metadata = new ApiMetadata
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.ValidationError,
-                    Message = "Comment content is required",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        var comment = _mockDataService.AddIncidentComment(id, request);
-
-        // Update incident's updated timestamp
-        incident.UpdatedAt = DateTime.UtcNow;
-        incident.Timeline.Add(new TimelineEntry
-        {
-            Id = Guid.NewGuid(),
-            Timestamp = DateTime.UtcNow,
-            Action = "Comment added",
-            Description = request.IsInternal ? "Internal comment added" : "Comment added",
-            PerformedBy = comment.AuthorId
+                Timestamp = DateTime.UtcNow,
+                RequestId = Guid.NewGuid().ToString()
+            }
         });
-
-        _logger.LogInformation($"Added comment to incident {id}");
-
-        return CreatedAtAction(
-            nameof(GetIncidentComments),
-            new { id = id },
-            new ApiResponse<Comment>
-            {
-                Status = ApiStatus.Success,
-                Data = comment,
-                Metadata = new ApiMetadata
-                {
-                    Timestamp = DateTime.UtcNow,
-                    RequestId = Guid.NewGuid().ToString()
-                }
-            });
     }
 
-    private static string GenerateETag()
+    /// <summary>
+    /// Delete an incident
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "RequireAdmin")]
+    public ActionResult<ApiResponse<object>> DeleteIncident(Guid id)
     {
-        return $"\"{Guid.NewGuid():N}\"";
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Deleting incident {id}");
+
+        return StatusCode(501, new ApiResponse<object>
+        {
+            Status = ApiStatus.Error,
+            Error = new ApiError
+            {
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Incident deletion requires database implementation"
+            },
+            Metadata = new ApiMetadata
+            {
+                Timestamp = DateTime.UtcNow,
+                RequestId = Guid.NewGuid().ToString()
+            }
+        });
     }
 }
 
 /// <summary>
-/// Update incident request
+/// Request model for creating an incident
 /// </summary>
-public record UpdateIncidentRequest
+public class CreateIncidentRequest
 {
-    public string? Title { get; init; }
-    public string? Description { get; init; }
-    public IncidentStatus? Status { get; init; }
-    public IncidentSeverity? Severity { get; init; }
-    public Guid? Assignee { get; init; }
-    public string? Resolution { get; init; }
-    public string? RootCause { get; init; }
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public IncidentType Type { get; set; }
+    public IncidentSeverity Severity { get; set; }
+    public IncidentStatus Status { get; set; } = IncidentStatus.Open;
+    public List<string>? AffectedPortals { get; set; }
+    public List<string>? AffectedServices { get; set; }
+    public int? ImpactedUsers { get; set; }
+    public Guid? Assignee { get; set; }
+    public Guid? Team { get; set; }
+    public Guid? ReportedBy { get; set; }
+    public List<string>? Tags { get; set; }
+    public bool IsPublic { get; set; }
+}
+
+/// <summary>
+/// Request model for updating an incident
+/// </summary>
+public class UpdateIncidentRequest
+{
+    public string? Title { get; set; }
+    public string? Description { get; set; }
+    public IncidentType? Type { get; set; }
+    public IncidentSeverity? Severity { get; set; }
+    public IncidentStatus? Status { get; set; }
+    public List<string>? AffectedPortals { get; set; }
+    public List<string>? AffectedServices { get; set; }
+    public int? ImpactedUsers { get; set; }
+    public Guid? Assignee { get; set; }
+    public Guid? Team { get; set; }
+    public List<string>? Tags { get; set; }
+    public bool? IsPublic { get; set; }
+}
+
+/// <summary>
+/// Request model for resolving an incident
+/// </summary>
+public class ResolveIncidentRequest
+{
+    public string Resolution { get; set; } = string.Empty;
+    public string? RootCause { get; set; }
+}
+
+/// <summary>
+/// Request model for creating a comment
+/// </summary>
+public class CreateCommentRequest
+{
+    public string Content { get; set; } = string.Empty;
+    public bool IsInternal { get; set; }
+    public List<string>? Attachments { get; set; }
+    public List<Guid>? MentionedUsers { get; set; }
 }

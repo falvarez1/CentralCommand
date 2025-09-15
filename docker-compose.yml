@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+  # ASP.NET Core API
+  centralcommand.api:
+    image: ${DOCKER_REGISTRY-}centralcommandapi
+    build:
+      context: .
+      dockerfile: apps/api/CentralCommand.Api/Dockerfile
+    networks:
+      - supabase_network
+      - app_network
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-auth:
+        condition: service_healthy
+      supabase-rest:
+        condition: service_started
+
+  # Supabase PostgreSQL Database
+  supabase-db:
+    image: supabase/postgres:15.1.0.117
+    container_name: supabase-db
+    healthcheck:
+      test: pg_isready -U postgres -h localhost
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - log_min_messages=fatal
+    restart: unless-stopped
+    networks:
+      - supabase_network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./volumes/db/init:/docker-entrypoint-initdb.d:Z
+
+  # Supabase Studio (Dashboard)
+  supabase-studio:
+    image: supabase/studio:20240422-5cf8f30
+    container_name: supabase-studio
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/profile', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    networks:
+      - supabase_network
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Supabase Kong API Gateway
+  supabase-kong:
+    image: kong:2.8.1
+    container_name: supabase-kong
+    restart: unless-stopped
+    entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+    networks:
+      - supabase_network
+      - app_network
+    volumes:
+      - ./volumes/kong/kong.yml:/home/kong/temp.yml:Z
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Supabase Auth Service
+  supabase-auth:
+    image: supabase/gotrue:v2.151.0
+    container_name: supabase-auth
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - supabase_network
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Supabase PostgREST
+  supabase-rest:
+    image: postgrest/postgrest:v12.0.1
+    container_name: supabase-rest
+    restart: unless-stopped
+    networks:
+      - supabase_network
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Supabase Realtime
+  supabase-realtime:
+    image: supabase/realtime:v2.28.32
+    container_name: supabase-realtime
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/tenants/realtime-dev/health"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    networks:
+      - supabase_network
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Supabase Storage
+  supabase-storage:
+    image: supabase/storage-api:v0.46.4
+    container_name: supabase-storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/status"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    networks:
+      - supabase_network
+    volumes:
+      - storage-data:/var/lib/storage
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-rest:
+        condition: service_started
+
+  # Supabase Meta
+  supabase-meta:
+    image: supabase/postgres-meta:v0.80.0
+    container_name: supabase-meta
+    restart: unless-stopped
+    networks:
+      - supabase_network
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Supabase Edge Functions
+  supabase-functions:
+    image: supabase/edge-runtime:v1.36.1
+    container_name: supabase-functions
+    restart: unless-stopped
+    networks:
+      - supabase_network
+    volumes:
+      - ./volumes/functions:/home/deno/functions:Z
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Supabase Vector (pgvector)
+  supabase-vector:
+    image: timberio/vector:0.28.1-alpine
+    container_name: supabase-vector
+    restart: unless-stopped
+    networks:
+      - supabase_network
+    volumes:
+      - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro
+      - vector-data:/var/lib/vector
+
+networks:
+  supabase_network:
+    driver: bridge
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  storage-data:
+  vector-data:

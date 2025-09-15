@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CentralCommand.Api.Models;
 using CentralCommand.Api.Services;
@@ -9,6 +10,7 @@ namespace CentralCommand.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
+[Authorize]
 public class StatisticsController : ControllerBase
 {
     private readonly StatisticsService _statisticsService;
@@ -24,6 +26,7 @@ public class StatisticsController : ControllerBase
     /// Get system-wide statistics
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<SystemStats>> GetStatistics()
     {
         var stats = _statisticsService.GetSystemStats();
@@ -45,6 +48,7 @@ public class StatisticsController : ControllerBase
     /// Get sparkline data for metrics visualization
     /// </summary>
     [HttpGet("sparklines")]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<Dictionary<string, List<MetricDataPoint>>>> GetSparklines(
         [FromQuery] string? metrics = null,
         [FromQuery] int hours = 24)
@@ -88,6 +92,7 @@ public class StatisticsController : ControllerBase
     /// Get health check status
     /// </summary>
     [HttpGet("health")]
+    [AllowAnonymous] // Health check endpoint should be accessible without auth
     public ActionResult<ApiResponse<HealthCheckResponse>> GetHealthStatus()
     {
         var stats = _statisticsService.GetSystemStats();
@@ -130,6 +135,7 @@ public class StatisticsController : ControllerBase
     /// Get performance metrics
     /// </summary>
     [HttpGet("performance")]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<PerformanceMetrics>> GetPerformanceMetrics()
     {
         var stats = _statisticsService.GetSystemStats();

@@ -89,6 +89,7 @@ public enum UserStatus
 public enum AuthProvider
 {
     Local,
+    Supabase,
     Google,
     Microsoft,
     GitHub,

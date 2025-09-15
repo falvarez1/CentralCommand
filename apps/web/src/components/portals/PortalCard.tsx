@@ -15,7 +15,7 @@ import {
 interface PortalCardProps {
   portal: Portal
   onClick?: () => void
-  onFavoriteClick?: (id: number) => void
+  onFavoriteClick?: (id: string) => void
   onOpenPortal?: () => void
   className?: string
 }
@@ -82,7 +82,7 @@ export const PortalCard: React.FC<PortalCardProps> = ({
               className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={handleFavoriteClick}
             >
-              <Heart className={`h-4 w-4 ${portal.favorited ? 'fill-current text-red-500' : ''}`} />
+              <Heart className={`h-4 w-4 ${portal.isFavorite ? 'fill-current text-red-500' : ''}`} />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -106,7 +106,7 @@ export const PortalCard: React.FC<PortalCardProps> = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleFavoriteClick}>
                   <Heart className="h-4 w-4 mr-2" />
-                  {portal.favorited ? 'Remove from Favorites' : 'Add to Favorites'}
+                  {portal.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -126,19 +126,19 @@ export const PortalCard: React.FC<PortalCardProps> = ({
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div>
             <span className="text-muted-foreground">Response</span>
-            <p className="font-mono font-medium">{portal.responseTime}ms</p>
+            <p className="font-mono font-medium">{portal.metrics?.responseTime || 0}ms</p>
           </div>
           <div>
             <span className="text-muted-foreground">Uptime</span>
-            <p className="font-mono font-medium">{portal.uptime}%</p>
+            <p className="font-mono font-medium">{portal.metrics?.uptime?.toFixed(2) || 0}%</p>
           </div>
           <div>
             <span className="text-muted-foreground">CPU</span>
-            <p className="font-mono font-medium">{portal.cpu}%</p>
+            <p className="font-mono font-medium">{portal.metrics?.cpu?.toFixed(1) || 0}%</p>
           </div>
           <div>
             <span className="text-muted-foreground">Memory</span>
-            <p className="font-mono font-medium">{portal.memory}%</p>
+            <p className="font-mono font-medium">{portal.metrics?.memory?.toFixed(1) || 0}%</p>
           </div>
         </div>
 

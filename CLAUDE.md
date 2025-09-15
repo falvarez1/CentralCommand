@@ -5,15 +5,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Central Command - A multi-component enterprise portal management system consisting of:
-1. **central-command-react**: Modern React application with TypeScript, Vite, and enterprise portal management features
-2. **CentralCommand.MockApi**: ASP.NET Core 8.0 Mock API with realistic data and SignalR real-time updates
-3. **prototype**: Single-file HTML prototype demonstrating core UI concepts
+1. **apps/web**: Modern React application with TypeScript, Vite, and enterprise portal management features
+2. **CentralCommand.Api**: ASP.NET Core 9.0 Production API with Supabase authentication, PostgreSQL via Supabase, and full security features (Port 5001)
+3. **CentralCommand.MockApi**: ASP.NET Core 9.0 Mock API with realistic data and SignalR real-time updates (Port 5000)
+4. **prototype**: Single-file HTML prototype demonstrating core UI concepts
+
+**Current Status**: Phase 1 (Supabase Authentication Integration) Complete ✅
 
 ## Commands
 
-### Central Command React
+### Central Command React (apps/web)
 
 ```bash
+# Navigate to the web app directory
+cd apps/web
+
 # Development
 npm install          # Install dependencies
 npm run dev          # Start development server at http://localhost:5173
@@ -35,19 +41,41 @@ npm run test:report  # Show test report
 npm run test:update-snapshots # Update visual snapshots
 ```
 
-### Mock API
+### Mock API (Development)
 
 ```bash
 # Development
-cd CentralCommand.MockApi
+cd apps/api/CentralCommand.MockApi
 dotnet restore       # Restore NuGet packages
 dotnet build         # Build the project
-dotnet run --urls http://localhost:5000  # Run API on port 5000
+dotnet run           # Run API on port 5000
 
 # Access points
 # API: http://localhost:5000
 # Swagger UI: http://localhost:5000
 # SignalR Hub: http://localhost:5000/hubs/metrics
+```
+
+### Production API (With Supabase Authentication)
+
+```bash
+# Prerequisites: Supabase project configured
+# Set environment variables in .env file:
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_KEY="your-service-key"
+
+# Development
+cd apps/api/CentralCommand.Api
+dotnet restore       # Restore NuGet packages
+dotnet build         # Build the project
+dotnet run           # Run API on port 5001
+
+# Access points
+# API: http://localhost:5001
+# Swagger UI: http://localhost:5001/swagger
+# SignalR Hub: http://localhost:5001/hubs/metrics
+# Supabase Dashboard: https://app.supabase.com/project/your-project
 ```
 
 ### Prototype
@@ -74,7 +102,7 @@ open prototype/central-command-panel.html   # macOS
 
 #### Project Structure
 ```
-central-command-react/
+apps/web/
 ├── src/
 │   ├── components/       # Reusable UI components
 │   │   ├── command-palette/  # Command palette (Cmd+K)
@@ -255,11 +283,11 @@ To run the complete application with API integration:
 
 ```bash
 # Terminal 1: Start Mock API
-cd CentralCommand.MockApi
+cd apps/api/CentralCommand.MockApi
 dotnet run --urls http://localhost:5000
 
 # Terminal 2: Start React App
-cd central-command-react
+cd apps/web
 npm run dev
 
 # Access the application

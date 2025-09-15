@@ -5,7 +5,7 @@ import { PortalCard } from './PortalCard'
 interface PortalGridProps {
   portals: Portal[]
   onPortalClick?: (portal: Portal) => void
-  onFavoriteClick?: (id: number) => void
+  onFavoriteClick?: (id: string) => void
   className?: string
 }
 

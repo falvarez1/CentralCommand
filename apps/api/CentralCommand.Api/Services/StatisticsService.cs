@@ -7,217 +7,112 @@ namespace CentralCommand.Api.Services;
 /// </summary>
 public class StatisticsService
 {
-    private readonly MockDataService _mockDataService;
-    private readonly Random _random = new();
+    private readonly ILogger<StatisticsService> _logger;
 
-    public StatisticsService(MockDataService mockDataService)
+    public StatisticsService(ILogger<StatisticsService> logger)
     {
-        _mockDataService = mockDataService;
+        _logger = logger;
     }
 
     public SystemStats GetSystemStats()
     {
-        var portals = _mockDataService.GetPortals();
-        var incidents = _mockDataService.GetIncidents();
+        // TODO: Implement with Entity Framework to get real statistics from database
+        _logger.LogInformation("Getting system statistics from database");
 
-        var operationalCount = portals.Count(p => p.Status == PortalStatus.Active);
-        var activeIncidents = incidents.Count(i => i.Status != IncidentStatus.Resolved && i.Status != IncidentStatus.Closed);
-        var resolvedToday = incidents.Count(i => i.ResolvedAt?.Date == DateTime.Today);
-
-        var totalRequests = portals.Sum(p => p.Metrics.Requests);
-        var totalErrors = portals.Sum(p => p.Metrics.Errors);
-
+        // Return placeholder data for now
+        // In production, this would query the database for real metrics
         return new SystemStats
         {
             // Portal statistics
-            TotalPortals = portals.Count,
-            OperationalPortals = operationalCount,
-            ActivePortals = portals.Count(p => p.Metrics.Requests > 100),
-            InactivePortals = portals.Count(p => p.Metrics.Requests <= 100),
+            TotalPortals = 0,
+            OperationalPortals = 0,
+            ActivePortals = 0,
+            InactivePortals = 0,
 
             // Health statistics
-            HealthScore = CalculateHealthScore(portals, incidents),
-            SystemUptime = portals.Average(p => p.Metrics.Uptime),
-            AverageResponseTime = portals.Average(p => p.Metrics.ResponseTime),
+            HealthScore = 0,
+            SystemUptime = 0,
+            AverageResponseTime = 0,
 
             // Performance statistics
-            TotalRequests = totalRequests,
-            TotalErrors = totalErrors,
-            ErrorRate = totalRequests > 0 ? (double)totalErrors / totalRequests * 100 : 0,
-            Throughput = portals.Average(p => p.Metrics.Throughput),
+            TotalRequests = 0,
+            TotalErrors = 0,
+            ErrorRate = 0,
+            Throughput = 0,
 
             // Resource statistics
-            AverageCpu = portals.Average(p => p.Metrics.Cpu),
-            AverageMemory = portals.Average(p => p.Metrics.Memory),
-            DiskUsage = 45 + _random.NextDouble() * 30,
-            NetworkLatency = portals.Average(p => p.Metrics.Latency),
+            AverageCpu = 0,
+            AverageMemory = 0,
+            DiskUsage = 0,
+            NetworkLatency = 0,
 
             // Incident statistics
-            ActiveIncidents = activeIncidents,
-            ResolvedToday = resolvedToday,
-            Mttr = CalculateAverageMTTR(incidents),
-            Mtbf = CalculateAverageMTBF(incidents),
+            ActiveIncidents = 0,
+            ResolvedToday = 0,
+            Mttr = 0, // Mean Time To Recovery
+            Mtbf = 0, // Mean Time Between Failures
 
             // User statistics
-            ActiveUsers = _random.Next(50, 200),
-            TotalUsers = _random.Next(500, 1000),
-            ConcurrentSessions = _random.Next(20, 100),
+            ActiveUsers = 0,
+            TotalUsers = 0,
+            ConcurrentSessions = 0,
 
             // Time-based statistics
             LastUpdated = DateTime.UtcNow,
             TimeRange = TimeRange.TwentyFourHours,
-            DataQuality = 95 + _random.NextDouble() * 5
+            DataQuality = 100
         };
     }
 
-    public Dictionary<string, List<MetricDataPoint>> GetSparklines()
+    public Dictionary<string, List<MetricDataPoint>> GetSparklines(string[]? requestedMetrics = null, int hours = 24)
     {
-        var sparklines = new Dictionary<string, List<MetricDataPoint>>();
-        var now = DateTime.UtcNow;
+        // TODO: Implement with Entity Framework to get real metrics history from database
+        _logger.LogInformation($"Getting sparkline data for last {hours} hours");
 
-        // Generate hourly data points for the last 24 hours
-        var metrics = new[] { "responseTime", "uptime", "cpu", "memory", "requests", "errors", "throughput" };
+        var metrics = requestedMetrics ?? new[] { "responseTime", "uptime", "requests", "errors", "cpu", "memory" };
+        var sparklines = new Dictionary<string, List<MetricDataPoint>>();
 
         foreach (var metric in metrics)
         {
-            var dataPoints = new List<MetricDataPoint>();
-            var baseValue = GetBaseValueForMetric(metric);
-
-            for (int i = 23; i >= 0; i--)
-            {
-                var variation = (metric == "uptime")
-                    ? 95 + _random.NextDouble() * 5  // Uptime should be high
-                    : baseValue + (_random.NextDouble() - 0.5) * baseValue * 0.4; // ±20% variation
-
-                dataPoints.Add(new MetricDataPoint
-                {
-                    Timestamp = now.AddHours(-i),
-                    Value = Math.Max(0, variation),
-                    Label = $"{24 - i}h ago"
-                });
-            }
-
-            sparklines[metric] = dataPoints;
+            sparklines[metric] = new List<MetricDataPoint>();
         }
 
         return sparklines;
     }
 
-    public PortalStats GetPortalStats()
+    private double CalculateHealthScore()
     {
-        var portals = _mockDataService.GetPortals();
-
-        var byCategory = Enum.GetValues<PortalCategory>()
-            .Where(c => c != PortalCategory.All)
-            .ToDictionary(
-                category => category,
-                category => portals.Count(p => p.Category == category)
-            );
-
-        var byEnvironment = Enum.GetValues<PortalEnvironment>()
-            .ToDictionary(
-                env => env,
-                env => portals.Count(p => p.Environment == env)
-            );
-
-        var byPriority = Enum.GetValues<PortalPriority>()
-            .ToDictionary(
-                priority => priority,
-                priority => portals.Count(p => p.Priority == priority)
-            );
-
-        return new PortalStats
-        {
-            Total = portals.Count,
-            Active = portals.Count(p => p.Status == PortalStatus.Active),
-            Degraded = portals.Count(p => p.Status == PortalStatus.Degraded),
-            Down = portals.Count(p => p.Status == PortalStatus.Down),
-            Maintenance = portals.Count(p => p.Status == PortalStatus.Maintenance),
-            Unknown = portals.Count(p => p.Status == PortalStatus.Unknown),
-            ByCategory = byCategory,
-            ByEnvironment = byEnvironment,
-            ByPriority = byPriority,
-            AverageUptime = portals.Average(p => p.Metrics.Uptime),
-            AverageResponseTime = portals.Average(p => p.Metrics.ResponseTime)
-        };
+        // TODO: Implement real health score calculation based on database metrics
+        return 0;
     }
 
-    public IncidentStats GetIncidentStats()
+    private double CalculateSystemUptime()
     {
-        var incidents = _mockDataService.GetIncidents();
-        var now = DateTime.UtcNow;
-
-        var bySeverity = Enum.GetValues<IncidentSeverity>()
-            .ToDictionary(
-                severity => severity,
-                severity => incidents.Count(i => i.Severity == severity)
-            );
-
-        var byType = Enum.GetValues<IncidentType>()
-            .ToDictionary(
-                type => type,
-                type => incidents.Count(i => i.Type == type)
-            );
-
-        return new IncidentStats
-        {
-            Total = incidents.Count,
-            Open = incidents.Count(i => i.Status == IncidentStatus.Open),
-            InProgress = incidents.Count(i => i.Status == IncidentStatus.InProgress),
-            Resolved = incidents.Count(i => i.Status == IncidentStatus.Resolved),
-            Closed = incidents.Count(i => i.Status == IncidentStatus.Closed),
-            BySeverity = bySeverity,
-            ByType = byType,
-            Last24Hours = incidents.Count(i => i.CreatedAt >= now.AddHours(-24)),
-            Last7Days = incidents.Count(i => i.CreatedAt >= now.AddDays(-7)),
-            AverageMTTR = CalculateAverageMTTR(incidents),
-            AverageMTBF = CalculateAverageMTBF(incidents)
-        };
+        // TODO: Implement real uptime calculation based on database records
+        return 0;
     }
 
-    private double CalculateHealthScore(List<Portal> portals, List<Incident> incidents)
+    private Dictionary<string, int> GetPortalCountsByCategory()
     {
-        var operationalPercentage = (double)portals.Count(p => p.Status == PortalStatus.Active) / portals.Count;
-        var avgUptime = portals.Average(p => p.Metrics.Uptime) / 100;
-        var activeIncidentPenalty = Math.Max(0, 1 - (incidents.Count(i => i.Status != IncidentStatus.Resolved) * 0.05));
-
-        return Math.Round((operationalPercentage * 0.4 + avgUptime * 0.4 + activeIncidentPenalty * 0.2) * 100, 2);
+        // TODO: Query database for portal counts by category
+        return new Dictionary<string, int>();
     }
 
-    private double CalculateAverageMTTR(List<Incident> incidents)
+    private Dictionary<string, int> GetPortalCountsByStatus()
     {
-        var resolvedIncidents = incidents.Where(i => i.Metrics?.Mttr != null).ToList();
-        return resolvedIncidents.Any() ? resolvedIncidents.Average(i => i.Metrics!.Mttr!.Value) : 0;
+        // TODO: Query database for portal counts by status
+        return new Dictionary<string, int>();
     }
 
-    private double CalculateAverageMTBF(List<Incident> incidents)
+    private Dictionary<string, int> GetIncidentCountsBySeverity()
     {
-        if (incidents.Count < 2) return 10080; // Default to 1 week in minutes
-
-        var sortedIncidents = incidents.OrderBy(i => i.CreatedAt).ToList();
-        var intervals = new List<double>();
-
-        for (int i = 1; i < sortedIncidents.Count; i++)
-        {
-            var interval = (sortedIncidents[i].CreatedAt - sortedIncidents[i - 1].CreatedAt).TotalMinutes;
-            intervals.Add(interval);
-        }
-
-        return intervals.Any() ? intervals.Average() : 10080;
+        // TODO: Query database for incident counts by severity
+        return new Dictionary<string, int>();
     }
 
-    private double GetBaseValueForMetric(string metric)
+    private Dictionary<string, int> GetIncidentCountsByStatus()
     {
-        return metric switch
-        {
-            "responseTime" => 200 + _random.Next(100),
-            "uptime" => 99.5,
-            "cpu" => 40 + _random.Next(20),
-            "memory" => 50 + _random.Next(20),
-            "requests" => 5000 + _random.Next(2000),
-            "errors" => 10 + _random.Next(20),
-            "throughput" => 500 + _random.Next(200),
-            _ => 100
-        };
+        // TODO: Query database for incident counts by status
+        return new Dictionary<string, int>();
     }
 }

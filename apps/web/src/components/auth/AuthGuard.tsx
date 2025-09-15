@@ -10,6 +10,7 @@ import { UserRole } from '@/types/auth.types';
 import { LoadingWrapper } from '@/components/ui/loading-wrapper';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Shield, AlertCircle } from 'lucide-react';
+import { env } from '@/config/env';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -37,6 +38,11 @@ export function AuthGuard({
     hasRole,
     hasPermission
   } = useAuth();
+
+  // Bypass authentication in mock mode
+  if (env.api.enableMock) {
+    return <>{children}</>;
+  }
 
   // Show loading state while checking authentication
   if (isLoading) {

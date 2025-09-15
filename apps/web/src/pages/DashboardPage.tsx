@@ -9,6 +9,7 @@ import { PortalCard } from '@/components/portals/PortalCard'
 import { PortalGrid } from '@/components/portals/PortalGrid'
 import { PortalList } from '@/components/portals/PortalList'
 import { AddPortalModal } from '@/components/portals/AddPortalModal'
+import { PortalDetailsModal } from '@/components/portals/PortalDetailsModal'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { usePortalStore } from '@/stores/usePortalStore'
@@ -21,16 +22,19 @@ import { PortalStatus } from '@/types/portal.types';
 import { IncidentSeverity } from '@/types/incident.types';
 import { ViewMode } from '@/types';
 import { AlertTriangle, Plus, RefreshCw, Download } from 'lucide-react'
+import type { Portal } from '@/types/portal.types'
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
   const { portals, filteredPortals, searchTerm, selectedCategory, setSearchTerm, setSelectedCategory } = usePortalFilters()
   const { toggleFavorite } = usePortalStore()
   const { incidents } = useIncidentStore()
-  const { viewMode, setViewMode } = useUIStore()
+  const { currentView, setView } = useUIStore()
   const { showWarning, showSuccess, showInfo } = useNotificationContext()
   const { openCommandPalette } = useCommandPalette()
   const [addPortalOpen, setAddPortalOpen] = useState(false)
+  const [selectedPortal, setSelectedPortal] = useState<Portal | null>(null)
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
 
   // Check for critical incidents
   const criticalIncidents = incidents.filter(
@@ -58,20 +62,20 @@ export const DashboardPage: React.FC = () => {
       // Cmd/Ctrl + G for grid view
       if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
         e.preventDefault()
-        setViewMode(ViewMode.GRID)
+        setView('grid')
         showInfo('View Changed', 'Switched to grid view')
       }
       // Cmd/Ctrl + L for list view
       if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
         e.preventDefault()
-        setViewMode(ViewMode.LIST)
+        setView('list')
         showInfo('View Changed', 'Switched to list view')
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [openCommandPalette, setViewMode, showInfo])
+  }, [openCommandPalette, setView, showInfo])
 
   // Show notifications for critical issues
   useEffect(() => {
@@ -112,13 +116,29 @@ export const DashboardPage: React.FC = () => {
     showSuccess('Export Complete', 'Portal data has been exported successfully')
   }
 
+  const handlePortalClick = (portal: Portal) => {
+    setSelectedPortal(portal)
+    setDetailsModalOpen(true)
+  }
+
+  const handleFavoriteToggle = (id: string) => {
+    toggleFavorite(id)
+    const portal = portals.find(p => p.id === id)
+    if (portal) {
+      showSuccess(
+        portal.isFavorite ? 'Removed from Favorites' : 'Added to Favorites',
+        `${portal.name} has been ${portal.isFavorite ? 'removed from' : 'added to'} your favorites`
+      )
+    }
+  }
+
   return (
     <AppLayout>
       <MainContent
         portals={filteredPortals}
-        viewMode={viewMode}
+        viewMode={currentView === 'grid' ? ViewMode.GRID : currentView === 'list' ? ViewMode.LIST : ViewMode.DASHBOARD}
         selectedCategory={selectedCategory}
-        onViewModeChange={setViewMode}
+        onViewModeChange={(mode) => setView(mode === ViewMode.GRID ? 'grid' : mode === ViewMode.LIST ? 'list' : 'dashboard')}
         onCategoryChange={setSelectedCategory}
       >
         <div className="space-y-6">
@@ -205,17 +225,17 @@ export const DashboardPage: React.FC = () => {
                 Clear Filters
               </Button>
             </div>
-          ) : viewMode === ViewMode.GRID ? (
+          ) : currentView === 'grid' ? (
             <PortalGrid
               portals={filteredPortals}
-              onPortalClick={(portal) => navigate(`/portal/${portal.id}`)}
-              onFavoriteClick={toggleFavorite}
+              onPortalClick={handlePortalClick}
+              onFavoriteClick={handleFavoriteToggle}
             />
           ) : (
             <PortalList
               portals={filteredPortals}
-              onPortalClick={(portal) => navigate(`/portal/${portal.id}`)}
-              onFavoriteClick={toggleFavorite}
+              onPortalClick={handlePortalClick}
+              onFavoriteClick={handleFavoriteToggle}
             />
           )}
         </div>
@@ -225,6 +245,13 @@ export const DashboardPage: React.FC = () => {
       <AddPortalModal
         open={addPortalOpen}
         onClose={() => setAddPortalOpen(false)}
+      />
+
+      {/* Portal Details Modal */}
+      <PortalDetailsModal
+        portal={selectedPortal}
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
       />
     </AppLayout>
   )

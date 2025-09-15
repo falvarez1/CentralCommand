@@ -1,6 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CentralCommand.Api.Models;
-using CentralCommand.Api.Services;
 
 namespace CentralCommand.Api.Controllers;
 
@@ -9,14 +9,13 @@ namespace CentralCommand.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
+[Authorize]
 public class PortalsController : ControllerBase
 {
-    private readonly MockDataService _mockDataService;
     private readonly ILogger<PortalsController> _logger;
 
-    public PortalsController(MockDataService mockDataService, ILogger<PortalsController> logger)
+    public PortalsController(ILogger<PortalsController> logger)
     {
-        _mockDataService = mockDataService;
         _logger = logger;
     }
 
@@ -24,6 +23,7 @@ public class PortalsController : ControllerBase
     /// Get all portals with optional filtering
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<List<Portal>>> GetPortals(
         [FromQuery] string? category = null,
         [FromQuery] string? status = null,
@@ -34,56 +34,14 @@ public class PortalsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var portals = _mockDataService.GetPortals();
+        // TODO: Implement with Entity Framework and repository pattern
+        // This is a placeholder response for production API
+        _logger.LogInformation("Getting portals with filters");
 
-        // Apply filters
-        if (!string.IsNullOrEmpty(category) && Enum.TryParse<PortalCategory>(category, true, out var cat))
-        {
-            portals = portals.Where(p => p.Category == cat).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<PortalStatus>(status, true, out var stat))
-        {
-            portals = portals.Where(p => p.Status == stat).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(environment) && Enum.TryParse<PortalEnvironment>(environment, true, out var env))
-        {
-            portals = portals.Where(p => p.Environment == env).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(priority) && Enum.TryParse<PortalPriority>(priority, true, out var prio))
-        {
-            portals = portals.Where(p => p.Priority == prio).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(searchTerm))
-        {
-            var searchLower = searchTerm.ToLower();
-            portals = portals.Where(p =>
-                p.Name.ToLower().Contains(searchLower) ||
-                (p.Description?.ToLower().Contains(searchLower) ?? false) ||
-                p.Tags.Any(t => t.ToLower().Contains(searchLower))
-            ).ToList();
-        }
-
-        if (isFavorite.HasValue)
-        {
-            portals = portals.Where(p => p.IsFavorite == isFavorite.Value).ToList();
-        }
-
-        // Apply pagination
-        var totalItems = portals.Count;
-        var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-        var paginatedPortals = portals
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        var response = new ApiResponse<List<Portal>>
+        return Ok(new ApiResponse<List<Portal>>
         {
             Status = ApiStatus.Success,
-            Data = paginatedPortals,
+            Data = new List<Portal>(),
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -92,43 +50,115 @@ public class PortalsController : ControllerBase
                 {
                     Page = page,
                     PageSize = pageSize,
-                    TotalPages = totalPages,
-                    TotalItems = totalItems,
-                    HasNext = page < totalPages,
-                    HasPrevious = page > 1
+                    TotalPages = 0,
+                    TotalItems = 0,
+                    HasNext = false,
+                    HasPrevious = false
                 }
             }
-        };
-
-        return Ok(response);
+        });
     }
 
     /// <summary>
     /// Get a specific portal by ID
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<Portal>> GetPortal(Guid id)
     {
-        var portal = _mockDataService.GetPortal(id);
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Getting portal {id}");
 
-        if (portal == null)
+        return NotFound(new ApiResponse<Portal>
         {
-            return NotFound(new ApiResponse<Portal>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
+                Code = "404",
+                Message = $"Portal {id} not found",
+                Details = "This endpoint requires database implementation"
+            },
+            Metadata = new ApiMetadata
+            {
+                Timestamp = DateTime.UtcNow,
+                RequestId = Guid.NewGuid().ToString()
+            }
+        });
+    }
 
-        return Ok(new ApiResponse<Portal>
+    /// <summary>
+    /// Create a new portal
+    /// </summary>
+    [HttpPost]
+    [Authorize(Policy = "RequireManager")]
+    public ActionResult<ApiResponse<Portal>> CreatePortal([FromBody] CreatePortalRequest request)
+    {
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation("Creating new portal");
+
+        return StatusCode(501, new ApiResponse<Portal>
         {
-            Status = ApiStatus.Success,
-            Data = portal,
+            Status = ApiStatus.Error,
+            Error = new ApiError
+            {
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Portal creation requires database implementation"
+            },
+            Metadata = new ApiMetadata
+            {
+                Timestamp = DateTime.UtcNow,
+                RequestId = Guid.NewGuid().ToString()
+            }
+        });
+    }
+
+    /// <summary>
+    /// Update an existing portal
+    /// </summary>
+    [HttpPut("{id}")]
+    [Authorize(Policy = "RequireManager")]
+    public ActionResult<ApiResponse<Portal>> UpdatePortal(Guid id, [FromBody] UpdatePortalRequest request)
+    {
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Updating portal {id}");
+
+        return StatusCode(501, new ApiResponse<Portal>
+        {
+            Status = ApiStatus.Error,
+            Error = new ApiError
+            {
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Portal update requires database implementation"
+            },
+            Metadata = new ApiMetadata
+            {
+                Timestamp = DateTime.UtcNow,
+                RequestId = Guid.NewGuid().ToString()
+            }
+        });
+    }
+
+    /// <summary>
+    /// Delete a portal
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "RequireAdmin")]
+    public ActionResult<ApiResponse<object>> DeletePortal(Guid id)
+    {
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Deleting portal {id}");
+
+        return StatusCode(501, new ApiResponse<object>
+        {
+            Status = ApiStatus.Error,
+            Error = new ApiError
+            {
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Portal deletion requires database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -141,65 +171,21 @@ public class PortalsController : ControllerBase
     /// Update portal metrics
     /// </summary>
     [HttpPost("{id}/metrics")]
-    public ActionResult<ApiResponse<PortalMetrics>> UpdatePortalMetrics(Guid id, [FromBody] PortalMetrics? metrics = null)
+    [Authorize(Policy = "RequireDeveloper")]
+    public ActionResult<ApiResponse<Portal>> UpdatePortalMetrics(Guid id, [FromBody] PortalMetrics metrics)
     {
-        var portal = _mockDataService.GetPortal(id);
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Updating metrics for portal {id}");
 
-        if (portal == null)
+        return StatusCode(501, new ApiResponse<Portal>
         {
-            return NotFound(new ApiResponse<PortalMetrics>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        // Update with provided metrics or generate new ones
-        if (metrics != null)
-        {
-            portal.Metrics = metrics;
-        }
-        else
-        {
-            _mockDataService.UpdatePortalMetrics(id);
-        }
-
-        portal.LastChecked = DateTime.UtcNow;
-        portal.UpdatedAt = DateTime.UtcNow;
-        portal.ETag = GenerateETag();
-
-        _logger.LogInformation($"Updated metrics for portal {id}");
-
-        return Ok(new ApiResponse<PortalMetrics>
-        {
-            Status = ApiStatus.Success,
-            Data = portal.Metrics,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
-        });
-    }
-
-    /// <summary>
-    /// Get portal statistics
-    /// </summary>
-    [HttpGet("stats")]
-    public ActionResult<ApiResponse<PortalStats>> GetPortalStats()
-    {
-        var statisticsService = HttpContext.RequestServices.GetRequiredService<StatisticsService>();
-        var stats = statisticsService.GetPortalStats();
-
-        return Ok(new ApiResponse<PortalStats>
-        {
-            Status = ApiStatus.Success,
-            Data = stats,
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Metrics update requires database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -212,32 +198,23 @@ public class PortalsController : ControllerBase
     /// Get portal metrics history
     /// </summary>
     [HttpGet("{id}/metrics/history")]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<MetricsHistory>> GetPortalMetricsHistory(
         Guid id,
         [FromQuery] MetricsTimeRange timeRange = MetricsTimeRange.Last24Hours)
     {
-        var metricsHistory = _mockDataService.GetPortalMetricsHistory(id, timeRange);
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Getting metrics history for portal {id}");
 
-        if (metricsHistory == null)
+        return StatusCode(501, new ApiResponse<MetricsHistory>
         {
-            return NotFound(new ApiResponse<MetricsHistory>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found or no metrics history available",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        _logger.LogInformation($"Retrieved metrics history for portal {id} with time range {timeRange}");
-
-        return Ok(new ApiResponse<MetricsHistory>
-        {
-            Status = ApiStatus.Success,
-            Data = metricsHistory,
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Metrics history requires database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -250,30 +227,21 @@ public class PortalsController : ControllerBase
     /// Get portal health check configuration
     /// </summary>
     [HttpGet("{id}/health")]
+    [Authorize(Policy = "RequireViewer")]
     public ActionResult<ApiResponse<PortalHealth>> GetPortalHealth(Guid id)
     {
-        var portalHealth = _mockDataService.GetPortalHealth(id);
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Getting health check configuration for portal {id}");
 
-        if (portalHealth == null)
+        return StatusCode(501, new ApiResponse<PortalHealth>
         {
-            return NotFound(new ApiResponse<PortalHealth>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found or health data not available",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        _logger.LogInformation($"Retrieved health check configuration for portal {id}");
-
-        return Ok(new ApiResponse<PortalHealth>
-        {
-            Status = ApiStatus.Success,
-            Data = portalHealth,
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Health check requires database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -286,30 +254,21 @@ public class PortalsController : ControllerBase
     /// Perform batch operations on multiple portals
     /// </summary>
     [HttpPost("batch")]
-    public ActionResult<ApiResponse<BatchOperationResponse>> PerformBatchOperation([FromBody] BatchOperationRequest request)
+    [Authorize(Policy = "RequireManager")]
+    public ActionResult<ApiResponse<BatchOperationResponse>> BatchOperation([FromBody] BatchOperationRequest request)
     {
-        if (request.PortalIds == null || !request.PortalIds.Any())
+        // TODO: Implement with Entity Framework
+        _logger.LogInformation($"Performing batch operation: {request.Operation}");
+
+        return StatusCode(501, new ApiResponse<BatchOperationResponse>
         {
-            return BadRequest(new ApiResponse<BatchOperationResponse>
+            Status = ApiStatus.Error,
+            Error = new ApiError
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.ValidationError,
-                    Message = "Portal IDs are required for batch operations",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        var response = _mockDataService.PerformBatchOperation(request);
-
-        _logger.LogInformation($"Performed batch operation {request.Operation} on {request.PortalIds.Count} portals. Success: {response.SuccessCount}, Failed: {response.FailureCount}");
-
-        return Ok(new ApiResponse<BatchOperationResponse>
-        {
-            Status = ApiStatus.Success,
-            Data = response,
+                Code = "501",
+                Message = "Not implemented",
+                Details = "Batch operations require database implementation"
+            },
             Metadata = new ApiMetadata
             {
                 Timestamp = DateTime.UtcNow,
@@ -317,77 +276,38 @@ public class PortalsController : ControllerBase
             }
         });
     }
-
-    private static string GenerateETag()
-    {
-        return $"\"{Guid.NewGuid():N}\"";
-    }
 }
 
 /// <summary>
-/// API response wrapper
+/// Request model for creating a portal
 /// </summary>
-public class ApiResponse<T>
+public class CreatePortalRequest
 {
-    public ApiStatus Status { get; set; }
-    public T? Data { get; set; }
-    public ApiError? Error { get; set; }
-    public ApiMetadata? Metadata { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string Url { get; set; } = string.Empty;
+    public PortalCategory Category { get; set; }
+    public PortalEnvironment Environment { get; set; }
+    public PortalPriority Priority { get; set; }
+    public AuthType AuthType { get; set; }
+    public PortalConfig? Config { get; set; }
+    public List<string>? Tags { get; set; }
 }
 
 /// <summary>
-/// API status enum
+/// Request model for updating a portal
 /// </summary>
-public enum ApiStatus
+public class UpdatePortalRequest
 {
-    Success,
-    Error,
-    Pending,
-    Cancelled
-}
-
-/// <summary>
-/// API error codes
-/// </summary>
-public enum ErrorCode
-{
-    NotFound = 3001,
-    ValidationError = 2001,
-    InternalError = 5001,
-    Unauthorized = 1001
-}
-
-/// <summary>
-/// API error structure
-/// </summary>
-public class ApiError
-{
-    public ErrorCode Code { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; }
-    public string? TraceId { get; set; }
-}
-
-/// <summary>
-/// API metadata
-/// </summary>
-public class ApiMetadata
-{
-    public DateTime Timestamp { get; set; }
-    public string RequestId { get; set; } = string.Empty;
-    public string? Version { get; set; }
-    public PaginationResponse? Pagination { get; set; }
-}
-
-/// <summary>
-/// Pagination response
-/// </summary>
-public class PaginationResponse
-{
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages { get; set; }
-    public int TotalItems { get; set; }
-    public bool HasNext { get; set; }
-    public bool HasPrevious { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public string? Url { get; set; }
+    public PortalCategory? Category { get; set; }
+    public PortalStatus? Status { get; set; }
+    public PortalEnvironment? Environment { get; set; }
+    public PortalPriority? Priority { get; set; }
+    public AuthType? AuthType { get; set; }
+    public PortalConfig? Config { get; set; }
+    public List<string>? Tags { get; set; }
+    public bool? IsFavorite { get; set; }
 }

@@ -8,6 +8,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { authService } from '@/lib/api/services/auth.service';
 import { clearSensitiveData, setCsrfToken } from '@/lib/cookies';
+import { env } from '@/config/env';
 import type {
   User,
   LoginRequest,
@@ -151,6 +152,11 @@ export const useAuthStore = create<AuthStore>()(
 
       // Refresh session
       refreshSession: async () => {
+        // Skip in mock mode
+        if (env.api.enableMock) {
+          return;
+        }
+
         try {
           // Backend handles HttpOnly cookies automatically
           const response = await authService.refreshToken();
@@ -172,6 +178,15 @@ export const useAuthStore = create<AuthStore>()(
 
       // Fetch current user
       fetchCurrentUser: async () => {
+        // Skip in mock mode
+        if (env.api.enableMock) {
+          set((state) => {
+            state.isLoading = false;
+            state.isAuthenticated = false;
+          });
+          return;
+        }
+
         set((state) => {
           state.isLoading = true;
         });
@@ -242,6 +257,15 @@ export const useAuthStore = create<AuthStore>()(
 
       // Initialize authentication from existing session
       initializeAuth: async () => {
+        // Skip auth initialization in mock mode
+        if (env.api.enableMock) {
+          set((state) => {
+            state.isLoading = false;
+            state.isAuthenticated = false;
+          });
+          return;
+        }
+
         set((state) => {
           state.isLoading = true;
         });

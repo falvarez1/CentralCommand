@@ -67,7 +67,7 @@ const statusColors = {
   [IncidentStatus.CLOSED]: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
 };
 
-export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
+const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
   incidents: propIncidents,
   onIncidentClick,
   maxHeight = '600px',

@@ -132,6 +132,24 @@ class SignalRService {
       });
     });
 
+    // Add handlers for actual server event names to prevent warnings
+    this.connection.on('connected', () => {
+      // Server sends this when connection is established
+      if (import.meta.env.DEV) {
+        console.log('Server confirmed connection');
+      }
+    });
+
+    this.connection.on('portalmetricsupdated', (update: any) => {
+      // Convert to expected format
+      this.notifyListeners('metricUpdate', update);
+    });
+
+    this.connection.on('statisticsupdated', (update: any) => {
+      // Convert to expected format
+      this.notifyListeners('systemHealthUpdate', update);
+    });
+
     this.connection.on('Alert', (alert: { type: string; message: string; severity: string }) => {
       this.notifyListeners('alert', alert);
 
@@ -215,7 +233,8 @@ class SignalRService {
       }
 
       // Subscribe to system-wide updates
-      await this.connection.invoke('SubscribeToSystemUpdates');
+      // Commented out - server method doesn't exist in mock API
+      // await this.connection.invoke('SubscribeToSystemUpdates');
     } catch (error) {
       console.error('Failed to subscribe to channels:', error);
     }

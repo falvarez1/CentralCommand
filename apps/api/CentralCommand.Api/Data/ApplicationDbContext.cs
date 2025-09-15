@@ -17,10 +17,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     {
     }
 
-    // Additional DbSets
+    // Authentication DbSets
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<UserAuditLog> UserAuditLogs => Set<UserAuditLog>();
+
+    // Business Entity DbSets
+    public DbSet<Portal> Portals => Set<Portal>();
+    public DbSet<PortalMetricHistory> PortalMetricHistory => Set<PortalMetricHistory>();
+    public DbSet<Incident> Incidents => Set<Incident>();
+    public DbSet<IncidentComment> IncidentComments => Set<IncidentComment>();
+    public DbSet<IncidentStatusHistory> IncidentStatusHistory => Set<IncidentStatusHistory>();
+    public DbSet<SystemStatistics> SystemStatistics => Set<SystemStatistics>();
+    public DbSet<SparklineDataPoint> SparklineDataPoints => Set<SparklineDataPoint>();
+    public DbSet<CategoryStatistics> CategoryStatistics => Set<CategoryStatistics>();
+    public DbSet<TeamStatistics> TeamStatistics => Set<TeamStatistics>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -219,6 +230,174 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .WithMany(u => u.AuditLogs)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure Portal entity
+        builder.Entity<Portal>(entity =>
+        {
+            entity.ToTable("Portals", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb");
+
+            entity.HasIndex(e => e.Name);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.Environment);
+            entity.HasIndex(e => e.Category);
+            entity.HasIndex(e => e.IsActive);
+
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.UpdatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.UpdatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure PortalMetricHistory
+        builder.Entity<PortalMetricHistory>(entity =>
+        {
+            entity.ToTable("PortalMetricHistory", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.PortalId, e.Timestamp });
+
+            entity.HasOne(e => e.Portal)
+                .WithMany(p => p.MetricHistory)
+                .HasForeignKey(e => e.PortalId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure Incident entity
+        builder.Entity<Incident>(entity =>
+        {
+            entity.ToTable("Incidents", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb");
+
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.Severity);
+            entity.HasIndex(e => e.Priority);
+            entity.HasIndex(e => e.CreatedAt);
+
+            entity.HasOne(e => e.Portal)
+                .WithMany(p => p.Incidents)
+                .HasForeignKey(e => e.PortalId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.AssignedTo)
+                .WithMany()
+                .HasForeignKey(e => e.AssignedToId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.UpdatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.UpdatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure IncidentComment
+        builder.Entity<IncidentComment>(entity =>
+        {
+            entity.ToTable("IncidentComments", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.IncidentId, e.CreatedAt });
+
+            entity.HasOne(e => e.Incident)
+                .WithMany(i => i.Comments)
+                .HasForeignKey(e => e.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.EditedBy)
+                .WithMany()
+                .HasForeignKey(e => e.EditedById)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure IncidentStatusHistory
+        builder.Entity<IncidentStatusHistory>(entity =>
+        {
+            entity.ToTable("IncidentStatusHistory", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.IncidentId, e.ChangedAt });
+
+            entity.HasOne(e => e.Incident)
+                .WithMany(i => i.StatusHistory)
+                .HasForeignKey(e => e.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ChangedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedById)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure SystemStatistics
+        builder.Entity<SystemStatistics>(entity =>
+        {
+            entity.ToTable("SystemStatistics", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.AdditionalMetrics)
+                .HasColumnType("jsonb");
+
+            entity.HasIndex(e => e.Timestamp);
+        });
+
+        // Configure SparklineDataPoint
+        builder.Entity<SparklineDataPoint>(entity =>
+        {
+            entity.ToTable("SparklineDataPoints", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.MetricName, e.Timestamp });
+            entity.HasIndex(e => new { e.PortalId, e.MetricName, e.Timestamp });
+
+            entity.HasOne(e => e.Portal)
+                .WithMany()
+                .HasForeignKey(e => e.PortalId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure CategoryStatistics
+        builder.Entity<CategoryStatistics>(entity =>
+        {
+            entity.ToTable("CategoryStatistics", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.Category, e.Timestamp });
+        });
+
+        // Configure TeamStatistics
+        builder.Entity<TeamStatistics>(entity =>
+        {
+            entity.ToTable("TeamStatistics", "public");
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.TeamId, e.Timestamp });
         });
 
         // Seed default roles
