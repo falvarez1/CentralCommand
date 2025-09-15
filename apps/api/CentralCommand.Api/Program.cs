@@ -1,59 +1,229 @@
-using System;
-using System.Text;
-using System.Threading.RateLimiting;
-using CentralCommand.Api.Extensions;
+using CentralCommand.Api.Data;
+using CentralCommand.Api.Data.Entities;
 using CentralCommand.Api.Hubs;
-using CentralCommand.Api.Infrastructure.BackgroundServices;
-using CentralCommand.Api.Infrastructure.Caching;
-using CentralCommand.Api.Infrastructure.Middleware;
-using CentralCommand.Api.Repositories;
+using CentralCommand.Api.Middleware;
 using CentralCommand.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Serilog;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .Enrich.WithMachineName()
-    .Enrich.WithEnvironmentName()
-    .WriteTo.Console()
-    .WriteTo.File("logs/centralcommand-.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
-
-builder.Host.UseSerilog();
+// Configure JSON serialization options
+builder.Services.Configure<JsonOptions>(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.WriteIndented = true;
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+    options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+});
 
 // Add services to the container
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = true;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    });
+
+// Configure connection string from environment variables or configuration
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING");
+if (string.IsNullOrEmpty(connectionString))
+{
+    // Build connection string from individual components
+    var host = Environment.GetEnvironmentVariable("DATABASE_HOST") ?? "localhost";
+    var port = Environment.GetEnvironmentVariable("DATABASE_PORT") ?? "5432";
+    var database = Environment.GetEnvironmentVariable("DATABASE_NAME") ?? "centralcommand";
+    var username = Environment.GetEnvironmentVariable("DATABASE_USER") ?? "postgres";
+    var password = Environment.GetEnvironmentVariable("DATABASE_PASSWORD");
+
+    if (!string.IsNullOrEmpty(password))
+    {
+        connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};Include Error Detail=true";
+    }
+    else
+    {
+        // Fall back to configuration if no environment variables
+        connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    }
+}
+
+// Configure Entity Framework Core with PostgreSQL
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseNpgsql(connectionString,
+        npgsqlOptions =>
+        {
+            npgsqlOptions.MigrationsAssembly("CentralCommand.Api");
+            npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "auth");
+        });
+});
+
+// Configure ASP.NET Core Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+{
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequiredUniqueChars = 4;
+
+    // Lockout settings
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
+
+    // User settings
+    options.User.RequireUniqueEmail = true;
+    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+
+    // Sign-in settings
+    options.SignIn.RequireConfirmedEmail = false; // For demo purposes
+    options.SignIn.RequireConfirmedPhoneNumber = false;
+    options.SignIn.RequireConfirmedAccount = false;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+// Configure JWT authentication from environment variables with fallback to configuration
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? builder.Configuration["JwtSettings:Secret"];
+
+if (string.IsNullOrEmpty(jwtSecret) || jwtSecret.Length < 32)
+{
+    throw new InvalidOperationException("JWT Secret must be configured and at least 32 characters long. Set JWT_SECRET environment variable.");
+}
+
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? builder.Configuration["JwtSettings:Issuer"]
+    ?? "CentralCommand.API";
+
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? builder.Configuration["JwtSettings:Audience"]
+    ?? "CentralCommand.Client";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment() ||
+        builder.Configuration.GetValue<bool>("SecuritySettings:RequireHttpsMetadata", true);
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+        ClockSkew = TimeSpan.Zero
+    };
+
+    // Configure JWT bearer events for SignalR and cookie authentication
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Try to get token from cookie first
+            if (context.Request.Cookies.TryGetValue("access_token", out var cookieToken))
+            {
+                context.Token = cookieToken;
+            }
+            // Then check query string for SignalR
+            else
+            {
+                var accessToken = context.Request.Query["access_token"];
+
+                // If the request is for our hub...
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    (path.StartsWithSegments("/hubs")))
+                {
+                    // Read the token out of the query string
+                    context.Token = accessToken;
+                }
+            }
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            // Additional validation - check if token is blacklisted
+            var blacklistService = context.HttpContext.RequestServices.GetRequiredService<ITokenBlacklistService>();
+            var jti = blacklistService.GetJtiFromPrincipal(context.Principal);
+
+            if (!string.IsNullOrEmpty(jti) && blacklistService.IsTokenBlacklistedAsync(jti).GetAwaiter().GetResult())
+            {
+                context.Fail("Token has been revoked");
+            }
+
+            return Task.CompletedTask;
+        }
+    };
+});
+
+// Add authorization
+builder.Services.AddAuthorization(options =>
+{
+    // Add role-based policies
+    options.AddPolicy("RequireSuperAdmin", policy => policy.RequireRole("SuperAdmin"));
+    options.AddPolicy("RequireAdmin", policy => policy.RequireRole("SuperAdmin", "Admin"));
+    options.AddPolicy("RequireManager", policy => policy.RequireRole("SuperAdmin", "Admin", "Manager"));
+    options.AddPolicy("RequireDeveloper", policy => policy.RequireRole("SuperAdmin", "Admin", "Manager", "Developer"));
+    options.AddPolicy("RequireAnalyst", policy => policy.RequireRole("SuperAdmin", "Admin", "Manager", "Developer", "Analyst"));
+    options.AddPolicy("RequireViewer", policy => policy.RequireRole("SuperAdmin", "Admin", "Manager", "Developer", "Analyst", "Viewer"));
+});
+
+// Register application services
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<ICsrfProtectionService, CsrfProtectionService>();
+builder.Services.AddSingleton<ITokenBlacklistService, TokenBlacklistService>();
+
+// Add memory cache for rate limiting and CSRF tokens
+builder.Services.AddMemoryCache();
+
+// Configure antiforgery for CSRF protection
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-Token";
+    options.Cookie.Name = "__Host-X-CSRF-TOKEN";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+});
+
+// Add API documentation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Central Command API",
+        Title = "Central Command Mock API",
         Version = "v1",
-        Description = "Enterprise Portal Management System API",
-        Contact = new OpenApiContact
-        {
-            Name = "Central Command Team",
-            Email = "support@centralcommand.com"
-        }
+        Description = "Mock API for Central Command portal management system with authentication"
     });
 
+    // Add JWT authentication to Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme",
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -76,319 +246,197 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Configure CORS
+// Add SignalR
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+    });
+
+// Configure CORS with environment-based allowed origins
+var corsOrigins = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")?.Split(',')
+    ?? new[] { "http://localhost:5173", "https://localhost:5173" };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactApp", policy =>
+    options.AddPolicy("ReactApp", policy =>
     {
-        policy.WithOrigins(
-                builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" })
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials();
-    });
-});
-
-// Configure Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+        if (builder.Environment.IsDevelopment())
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("JWT Secret Key not configured"))),
-            ClockSkew = TimeSpan.Zero
-        };
-
-        // Support SignalR authentication
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            // Allow any localhost port for development
+            policy.SetIsOriginAllowed(origin =>
                 {
-                    context.Token = accessToken;
-                }
-
-                return Task.CompletedTask;
-            }
-        };
-    });
-
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("PortalRead", policy =>
-        policy.RequireClaim("permissions", "portal:read"));
-
-    options.AddPolicy("PortalWrite", policy =>
-        policy.RequireClaim("permissions", "portal:write"));
-
-    options.AddPolicy("IncidentManage", policy =>
-        policy.RequireClaim("permissions", "incident:manage"));
-
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Admin"));
-});
-
-// Configure Entity Framework
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 3,
-                maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null);
-            sqlOptions.CommandTimeout(30);
-        });
-
-    if (builder.Environment.IsDevelopment())
-    {
-        options.EnableSensitiveDataLogging();
-        options.EnableDetailedErrors();
-    }
-});
-
-// Configure Redis caching
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-    options.InstanceName = "CentralCommand";
-});
-
-// Configure in-memory caching
-builder.Services.AddMemoryCache();
-
-// Configure response caching
-builder.Services.AddResponseCaching();
-
-// Configure response compression
-builder.Services.AddResponseCompression(options =>
-{
-    options.EnableForHttps = true;
-    options.Providers.Add<BrotliCompressionProvider>();
-    options.Providers.Add<GzipCompressionProvider>();
-});
-
-// Configure rate limiting
-builder.Services.AddRateLimiter(options =>
-{
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
-        httpContext => RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.User?.Identity?.Name ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
-            factory: _ => new FixedWindowRateLimiterOptions
-            {
-                AutoReplenishment = true,
-                PermitLimit = 100,
-                Window = TimeSpan.FromMinutes(1)
-            }));
-
-    options.AddPolicy("ApiKeyPolicy", httpContext =>
-        RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: httpContext.Request.Headers["X-API-Key"].ToString(),
-            factory: _ => new SlidingWindowRateLimiterOptions
-            {
-                PermitLimit = 1000,
-                Window = TimeSpan.FromMinutes(1),
-                SegmentsPerWindow = 4,
-                AutoReplenishment = true
-            }));
-
-    options.OnRejected = async (context, token) =>
-    {
-        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-
-        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
-        {
-            context.HttpContext.Response.Headers.RetryAfter = retryAfter.TotalSeconds.ToString();
+                    var uri = new Uri(origin);
+                    return uri.Host == "localhost" || uri.Host == "127.0.0.1";
+                })
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials() // Required for SignalR and cookies
+                .WithExposedHeaders("X-CSRF-Token"); // Expose CSRF token header
         }
-
-        await context.HttpContext.Response.WriteAsJsonAsync(new
+        else
         {
-            type = "https://tools.ietf.org/html/rfc6585#section-4",
-            title = "Too Many Requests",
-            status = StatusCodes.Status429TooManyRequests,
-            detail = "Rate limit exceeded. Please retry after some time.",
-            instance = context.HttpContext.Request.Path
-        }, cancellationToken: token);
-    };
+            // Use specific origins in production
+            policy.WithOrigins(corsOrigins)
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+                .WithExposedHeaders("X-CSRF-Token"); // Expose CSRF token header
+        }
+    });
 });
-
-// Configure SignalR
-builder.Services.AddSignalR(options =>
-{
-    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
-    options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
-})
-.AddJsonProtocol(options =>
-{
-    options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-});
-
-// Configure Health Checks
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>("database")
-    .AddRedis(builder.Configuration.GetConnectionString("Redis") ?? string.Empty, name: "redis");
 
 // Register application services
-builder.Services.AddScoped<IPortalService, PortalService>();
-builder.Services.AddScoped<IIncidentService, IncidentService>();
-builder.Services.AddScoped<IStatisticsService, StatisticsService>();
-builder.Services.AddScoped<ICommandService, CommandService>();
-builder.Services.AddScoped<IUserPreferencesService, UserPreferencesService>();
+builder.Services.AddSingleton<MockDataService>();
+builder.Services.AddSingleton<StatisticsService>();
+builder.Services.AddHostedService<MetricsUpdateService>();
+builder.Services.AddHostedService<TokenCleanupService>();
 
-// Register infrastructure services
-builder.Services.AddScoped<IPortalRepository, PortalRepository>();
-builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
-builder.Services.AddSingleton<ICacheService, HybridCacheService>();
-builder.Services.AddSingleton<IConnectionManager, ConnectionManager>();
-builder.Services.AddScoped<IMetricsCollector, MetricsCollector>();
-builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>("database");
 
-// Register background services
-builder.Services.AddHostedService<MetricsCollectionService>();
-builder.Services.AddHostedService<HealthCheckService>();
-builder.Services.AddHostedService<CacheWarmupService>();
-
-// Configure API versioning
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ReportApiVersions = true;
-});
-
-builder.Services.AddVersionedApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});
-
-// Configure AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
-
-// Configure HttpClient
-builder.Services.AddHttpClient<IMetricsCollector, MetricsCollector>()
-    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-    {
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-        MaxConnectionsPerServer = 50
-    });
+// Configure logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    app.UseSwaggerUI(options =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Central Command API v1");
-        c.RoutePrefix = string.Empty;
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Central Command Mock API v1");
+        options.RoutePrefix = string.Empty; // Serve Swagger UI at root
     });
 }
-else
+
+// Add security headers middleware (should be early in pipeline)
+if (builder.Configuration.GetValue<bool>("SecuritySettings:EnableSecurityHeaders", true))
 {
-    app.UseExceptionHandler("/error");
+    app.UseSecurityHeaders();
+}
+
+// Add rate limiting middleware
+if (builder.Configuration.GetValue<bool>("SecuritySettings:EnableRateLimiting", true))
+{
+    app.UseRateLimiting();
+}
+
+// Enable CORS
+app.UseCors("ReactApp");
+
+// Use HTTPS redirection in production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
     app.UseHsts();
 }
 
-// Global error handler
-app.UseMiddleware<GlobalExceptionMiddleware>();
-
-// Request logging
-app.UseSerilogRequestLogging(options =>
+// Add exception handling middleware
+app.UseExceptionHandler(appError =>
 {
-    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    appError.Run(async context =>
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+
+        var response = new
+        {
+            status = "error",
+            error = new
+            {
+                code = 5001,
+                message = "An internal server error occurred",
+                timestamp = DateTime.UtcNow
+            }
+        };
+
+        await context.Response.WriteAsJsonAsync(response);
+    });
 });
 
-app.UseHttpsRedirection();
-app.UseResponseCompression();
-app.UseCors("AllowReactApp");
+// Add authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
-app.UseResponseCaching();
 
-// Map health checks
-app.MapHealthChecks("/health");
-app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready")
-});
-app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
-{
-    Predicate = _ => false
-});
+// Map controllers
+app.MapControllers();
 
-// Map API endpoints
-var apiGroup = app.MapGroup("/api/v{version:apiVersion}")
-    .RequireAuthorization()
-    .WithOpenApi();
-
-// Portal endpoints
-apiGroup.MapGroup("/portals")
-    .MapPortalEndpoints()
-    .WithTags("Portals")
-    .RequireAuthorization("PortalRead");
-
-// Incident endpoints
-apiGroup.MapGroup("/incidents")
-    .MapIncidentEndpoints()
-    .WithTags("Incidents")
-    .RequireAuthorization("IncidentManage");
-
-// Statistics endpoints
-apiGroup.MapGroup("/statistics")
-    .MapStatisticsEndpoints()
-    .WithTags("Statistics")
-    .RequireAuthorization("PortalRead");
-
-// Command palette endpoints
-apiGroup.MapGroup("/commands")
-    .MapCommandEndpoints()
-    .WithTags("Commands")
-    .RequireAuthorization();
-
-// User preference endpoints
-apiGroup.MapGroup("/users/me")
-    .MapUserEndpoints()
-    .WithTags("User")
-    .RequireAuthorization();
-
-// Map SignalR hubs
+// Map SignalR hub
 app.MapHub<MetricsHub>("/hubs/metrics");
 
-// Ensure database is created and migrations are applied
-using (var scope = app.Services.CreateScope())
+// Map health check endpoint
+app.MapHealthChecks("/health");
+
+// Add a simple root endpoint
+app.MapGet("/", () => Results.Json(new
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (app.Environment.IsDevelopment())
+    name = "Central Command Mock API",
+    version = "1.0.0",
+    status = "operational",
+    documentation = "/swagger",
+    authentication = new
     {
-        await dbContext.Database.EnsureCreatedAsync();
+        login = "/api/auth/login",
+        register = "/api/auth/register",
+        refresh = "/api/auth/refresh",
+        logout = "/api/auth/logout"
+    },
+    endpoints = new
+    {
+        portals = "/api/v1/portals",
+        incidents = "/api/v1/incidents",
+        statistics = "/api/v1/statistics",
+        health = "/health",
+        signalr = "/hubs/metrics"
     }
-    else
+}));
+
+// Log startup information
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("Central Command Mock API starting...");
+logger.LogInformation($"Environment: {app.Environment.EnvironmentName}");
+logger.LogInformation("CORS enabled for: http://localhost:* (any port)");
+logger.LogInformation("SignalR hub available at: /hubs/metrics");
+logger.LogInformation("Swagger UI available at: http://localhost:5000");
+logger.LogInformation("Authentication: JWT Bearer tokens enabled");
+
+// Apply database migrations and seed data in development
+if (app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
     {
-        await dbContext.Database.MigrateAsync();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        try
+        {
+            // Check if we can connect to the database
+            if (await dbContext.Database.CanConnectAsync())
+            {
+                logger.LogInformation("Applying database migrations...");
+                await dbContext.Database.MigrateAsync();
+                logger.LogInformation("Database migrations applied successfully");
+            }
+            else
+            {
+                logger.LogWarning("Cannot connect to database. Skipping migrations. Make sure PostgreSQL is running.");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while migrating the database. Make sure PostgreSQL is installed and running.");
+        }
     }
 }
 
-app.Run();
+// Initialize mock data
+var mockDataService = app.Services.GetRequiredService<MockDataService>();
+var portals = mockDataService.GetPortals();
+var incidents = mockDataService.GetIncidents();
+logger.LogInformation($"Initialized with {portals.Count} portals and {incidents.Count} incidents");
 
-// Make Program class accessible for testing
-public partial class Program { }
+app.Run();

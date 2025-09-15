@@ -1,0 +1,6 @@
+@CentralCommand.MockApi_HostAddress = http://localhost:5206
+
+GET {{CentralCommand.MockApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

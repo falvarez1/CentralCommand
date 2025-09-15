@@ -1,4 +1,4 @@
-namespace CentralCommand.MockApi.Models;
+namespace CentralCommand.Api.Models;
 
 /// <summary>
 /// Time range for metrics history

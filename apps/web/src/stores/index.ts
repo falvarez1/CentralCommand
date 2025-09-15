@@ -3,6 +3,9 @@
  * @module stores
  */
 
+// Auth store
+export { useAuthStore } from './useAuthStore';
+
 // Portal store
 export { usePortalStore } from './usePortalStore';
 

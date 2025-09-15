@@ -1,400 +1,245 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using CentralCommand.MockApi.Models;
 using CentralCommand.MockApi.Services;
+using CentralCommand.MockApi.Hubs;
 
 namespace CentralCommand.MockApi.Controllers;
 
-/// <summary>
-/// Controller for incident management endpoints
-/// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 public class IncidentsController : ControllerBase
 {
     private readonly MockDataService _mockDataService;
-    private readonly StatisticsService _statisticsService;
+    private readonly IHubContext<MetricsHub> _hubContext;
     private readonly ILogger<IncidentsController> _logger;
 
     public IncidentsController(
         MockDataService mockDataService,
-        StatisticsService statisticsService,
+        IHubContext<MetricsHub> hubContext,
         ILogger<IncidentsController> logger)
     {
         _mockDataService = mockDataService;
-        _statisticsService = statisticsService;
+        _hubContext = hubContext;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Get all incidents with optional filtering
-    /// </summary>
     [HttpGet]
-    public ActionResult<ApiResponse<List<Incident>>> GetIncidents(
+    public ActionResult<IEnumerable<Incident>> GetIncidents(
         [FromQuery] string? status = null,
         [FromQuery] string? severity = null,
-        [FromQuery] string? type = null,
-        [FromQuery] string? searchTerm = null,
-        [FromQuery] bool? isUnresolved = null,
+        [FromQuery] string? assignedTo = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         var incidents = _mockDataService.GetIncidents();
 
         // Apply filters
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<IncidentStatus>(status, true, out var stat))
-        {
-            incidents = incidents.Where(i => i.Status == stat).ToList();
-        }
+        if (!string.IsNullOrEmpty(status))
+            incidents = incidents.Where(i => i.Status == status).ToList();
 
-        if (!string.IsNullOrEmpty(severity) && Enum.TryParse<IncidentSeverity>(severity, true, out var sev))
-        {
-            incidents = incidents.Where(i => i.Severity == sev).ToList();
-        }
+        if (!string.IsNullOrEmpty(severity))
+            incidents = incidents.Where(i => i.Severity == severity).ToList();
 
-        if (!string.IsNullOrEmpty(type) && Enum.TryParse<IncidentType>(type, true, out var typ))
-        {
-            incidents = incidents.Where(i => i.Type == typ).ToList();
-        }
+        if (!string.IsNullOrEmpty(assignedTo))
+            incidents = incidents.Where(i => i.AssignedTo.Contains(assignedTo, StringComparison.OrdinalIgnoreCase)).ToList();
 
-        if (!string.IsNullOrEmpty(searchTerm))
-        {
-            var searchLower = searchTerm.ToLower();
-            incidents = incidents.Where(i =>
-                i.Title.ToLower().Contains(searchLower) ||
-                i.Description.ToLower().Contains(searchLower) ||
-                i.Tags.Any(t => t.ToLower().Contains(searchLower))
-            ).ToList();
-        }
-
-        if (isUnresolved.HasValue && isUnresolved.Value)
-        {
-            incidents = incidents.Where(i => i.Status != IncidentStatus.Resolved && i.Status != IncidentStatus.Closed).ToList();
-        }
-
-        // Order by creation date (newest first)
+        // Sort by creation date (newest first)
         incidents = incidents.OrderByDescending(i => i.CreatedAt).ToList();
 
         // Apply pagination
-        var totalItems = incidents.Count;
-        var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-        var paginatedIncidents = incidents
+        var totalCount = incidents.Count;
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var pagedIncidents = incidents
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
 
-        var response = new ApiResponse<List<Incident>>
+        Response.Headers.Append("X-Total-Count", totalCount.ToString());
+        Response.Headers.Append("X-Page", page.ToString());
+        Response.Headers.Append("X-Page-Size", pageSize.ToString());
+        Response.Headers.Append("X-Total-Pages", totalPages.ToString());
+
+        return Ok(pagedIncidents);
+    }
+
+    [HttpGet("{id}")]
+    public ActionResult<Incident> GetIncident(string id)
+    {
+        var incident = _mockDataService.GetIncident(id);
+        if (incident == null)
+            return NotFound(new { message = $"Incident with id '{id}' not found" });
+
+        return Ok(incident);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<Incident>> CreateIncident([FromBody] Incident incident)
+    {
+        if (string.IsNullOrWhiteSpace(incident.Title))
+            return BadRequest(new { message = "Incident title is required" });
+
+        if (string.IsNullOrWhiteSpace(incident.Description))
+            return BadRequest(new { message = "Incident description is required" });
+
+        var createdIncident = _mockDataService.CreateIncident(incident);
+        _logger.LogInformation($"Created new incident: {createdIncident.Title} (ID: {createdIncident.Id})");
+
+        // Broadcast the new incident via SignalR
+        await _hubContext.Clients.All.SendAsync("IncidentCreated", createdIncident);
+
+        return CreatedAtAction(nameof(GetIncident), new { id = createdIncident.Id }, createdIncident);
+    }
+
+    [HttpPatch("{id}/status")]
+    public async Task<ActionResult<Incident>> UpdateIncidentStatus(string id, [FromBody] StatusUpdateRequest request)
+    {
+        var incident = _mockDataService.GetIncident(id);
+        if (incident == null)
+            return NotFound(new { message = $"Incident with id '{id}' not found" });
+
+        incident.Status = request.Status;
+        incident.UpdatedAt = DateTime.UtcNow;
+
+        if (request.Status == "resolved" || request.Status == "closed")
         {
-            Status = ApiStatus.Success,
-            Data = paginatedIncidents,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString(),
-                Pagination = new PaginationResponse
-                {
-                    Page = page,
-                    PageSize = pageSize,
-                    TotalPages = totalPages,
-                    TotalItems = totalItems,
-                    HasNext = page < totalPages,
-                    HasPrevious = page > 1
-                }
-            }
+            incident.ResolvedAt = DateTime.UtcNow;
+        }
+
+        _logger.LogInformation($"Updated incident status: {incident.Title} -> {request.Status}");
+
+        // Broadcast the status change via SignalR
+        await _hubContext.Clients.All.SendAsync("IncidentStatusChanged", incident);
+
+        return Ok(incident);
+    }
+
+    [HttpPatch("{id}/assign")]
+    public async Task<ActionResult<Incident>> AssignIncident(string id, [FromBody] AssignmentRequest request)
+    {
+        var incident = _mockDataService.GetIncident(id);
+        if (incident == null)
+            return NotFound(new { message = $"Incident with id '{id}' not found" });
+
+        incident.AssignedTo = request.AssignedTo;
+        incident.UpdatedAt = DateTime.UtcNow;
+
+        _logger.LogInformation($"Assigned incident: {incident.Title} -> {request.AssignedTo}");
+
+        // Broadcast the assignment change via SignalR
+        await _hubContext.Clients.All.SendAsync("IncidentAssigned", incident);
+
+        return Ok(incident);
+    }
+
+    [HttpPost("{id}/comments")]
+    public async Task<ActionResult<IncidentComment>> AddComment(string id, [FromBody] CommentRequest request)
+    {
+        var incident = _mockDataService.GetIncident(id);
+        if (incident == null)
+            return NotFound(new { message = $"Incident with id '{id}' not found" });
+
+        var comment = new IncidentComment
+        {
+            Id = Guid.NewGuid().ToString(),
+            Author = request.Author,
+            Content = request.Content,
+            CreatedAt = DateTime.UtcNow
         };
 
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// Get a specific incident by ID
-    /// </summary>
-    [HttpGet("{id}")]
-    public ActionResult<ApiResponse<Incident>> GetIncident(Guid id)
-    {
-        var incident = _mockDataService.GetIncident(id);
-
-        if (incident == null)
-        {
-            return NotFound(new ApiResponse<Incident>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        return Ok(new ApiResponse<Incident>
-        {
-            Status = ApiStatus.Success,
-            Data = incident,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
-        });
-    }
-
-    /// <summary>
-    /// Create a new incident
-    /// </summary>
-    [HttpPost]
-    public ActionResult<ApiResponse<Incident>> CreateIncident([FromBody] CreateIncidentRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.Title))
-        {
-            return BadRequest(new ApiResponse<Incident>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.ValidationError,
-                    Message = "Title is required",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        var incident = _mockDataService.AddIncident(request);
-
-        _logger.LogInformation($"Created new incident: {incident.Id} - {incident.Title}");
-
-        return CreatedAtAction(
-            nameof(GetIncident),
-            new { id = incident.Id },
-            new ApiResponse<Incident>
-            {
-                Status = ApiStatus.Success,
-                Data = incident,
-                Metadata = new ApiMetadata
-                {
-                    Timestamp = DateTime.UtcNow,
-                    RequestId = Guid.NewGuid().ToString()
-                }
-            });
-    }
-
-    /// <summary>
-    /// Update an existing incident
-    /// </summary>
-    [HttpPut("{id}")]
-    public ActionResult<ApiResponse<Incident>> UpdateIncident(Guid id, [FromBody] UpdateIncidentRequest request)
-    {
-        var incident = _mockDataService.GetIncident(id);
-
-        if (incident == null)
-        {
-            return NotFound(new ApiResponse<Incident>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        // Update incident properties
-        if (!string.IsNullOrEmpty(request.Title))
-            incident.Title = request.Title;
-
-        if (!string.IsNullOrEmpty(request.Description))
-            incident.Description = request.Description;
-
-        if (request.Status.HasValue)
-        {
-            incident.Status = request.Status.Value;
-            incident.Timeline.Add(new TimelineEntry
-            {
-                Id = Guid.NewGuid(),
-                Timestamp = DateTime.UtcNow,
-                Action = $"Status changed to {request.Status.Value}",
-                Description = "Status update via API",
-                PerformedBy = Guid.NewGuid()
-            });
-
-            if (request.Status.Value == IncidentStatus.Resolved)
-            {
-                incident.ResolvedAt = DateTime.UtcNow;
-            }
-        }
-
-        if (request.Severity.HasValue)
-            incident.Severity = request.Severity.Value;
-
-        if (request.Assignee.HasValue)
-            incident.Assignee = request.Assignee.Value;
-
-        if (!string.IsNullOrEmpty(request.Resolution))
-            incident.Resolution = request.Resolution;
-
-        if (!string.IsNullOrEmpty(request.RootCause))
-            incident.RootCause = request.RootCause;
-
+        incident.Comments.Add(comment);
         incident.UpdatedAt = DateTime.UtcNow;
-        incident.UpdatedBy = Guid.NewGuid();
-        incident.ETag = GenerateETag();
 
-        _logger.LogInformation($"Updated incident: {incident.Id}");
+        _logger.LogInformation($"Added comment to incident: {incident.Title}");
 
-        return Ok(new ApiResponse<Incident>
-        {
-            Status = ApiStatus.Success,
-            Data = incident,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
-        });
+        // Broadcast the new comment via SignalR
+        await _hubContext.Clients.All.SendAsync("IncidentCommentAdded", id, comment);
+
+        return Ok(comment);
     }
 
-    /// <summary>
-    /// Get incident statistics
-    /// </summary>
-    [HttpGet("stats")]
-    public ActionResult<ApiResponse<IncidentStats>> GetIncidentStats()
-    {
-        var stats = _statisticsService.GetIncidentStats();
-
-        return Ok(new ApiResponse<IncidentStats>
-        {
-            Status = ApiStatus.Success,
-            Data = stats,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
-        });
-    }
-
-    /// <summary>
-    /// Get comments for an incident
-    /// </summary>
     [HttpGet("{id}/comments")]
-    public ActionResult<ApiResponse<List<Comment>>> GetIncidentComments(Guid id)
+    public ActionResult<IEnumerable<IncidentComment>> GetComments(string id)
     {
         var incident = _mockDataService.GetIncident(id);
-
         if (incident == null)
+            return NotFound(new { message = $"Incident with id '{id}' not found" });
+
+        return Ok(incident.Comments.OrderByDescending(c => c.CreatedAt));
+    }
+
+    [HttpGet("summary")]
+    public ActionResult<object> GetIncidentSummary()
+    {
+        var incidents = _mockDataService.GetIncidents();
+
+        return Ok(new
         {
-            return NotFound(new ApiResponse<List<Comment>>
+            total = incidents.Count,
+            byStatus = new
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
+                open = incidents.Count(i => i.Status == "open"),
+                investigating = incidents.Count(i => i.Status == "investigating"),
+                resolved = incidents.Count(i => i.Status == "resolved"),
+                closed = incidents.Count(i => i.Status == "closed")
+            },
+            bySeverity = new
+            {
+                critical = incidents.Count(i => i.Severity == "critical"),
+                high = incidents.Count(i => i.Severity == "high"),
+                medium = incidents.Count(i => i.Severity == "medium"),
+                low = incidents.Count(i => i.Severity == "low")
+            },
+            recentIncidents = incidents
+                .OrderByDescending(i => i.CreatedAt)
+                .Take(5)
+                .Select(i => new
                 {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        var comments = _mockDataService.GetIncidentComments(id);
-
-        _logger.LogInformation($"Retrieved {comments.Count} comments for incident {id}");
-
-        return Ok(new ApiResponse<List<Comment>>
-        {
-            Status = ApiStatus.Success,
-            Data = comments,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
+                    i.Id,
+                    i.Title,
+                    i.Severity,
+                    i.Status,
+                    i.CreatedAt
+                }),
+            averageResolutionTime = CalculateAverageResolutionTime(incidents),
+            mostAffectedServices = incidents
+                .GroupBy(i => i.AffectedService)
+                .OrderByDescending(g => g.Count())
+                .Take(5)
+                .Select(g => new
+                {
+                    service = g.Key,
+                    count = g.Count()
+                })
         });
     }
 
-    /// <summary>
-    /// Add a comment to an incident
-    /// </summary>
-    [HttpPost("{id}/comments")]
-    public ActionResult<ApiResponse<Comment>> AddIncidentComment(Guid id, [FromBody] CreateCommentRequest request)
+    private TimeSpan CalculateAverageResolutionTime(List<Incident> incidents)
     {
-        var incident = _mockDataService.GetIncident(id);
+        var resolvedIncidents = incidents.Where(i => i.ResolvedAt.HasValue).ToList();
+        if (!resolvedIncidents.Any())
+            return TimeSpan.Zero;
 
-        if (incident == null)
-        {
-            return NotFound(new ApiResponse<Comment>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Incident with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
+        var totalTime = resolvedIncidents
+            .Select(i => i.ResolvedAt!.Value - i.CreatedAt)
+            .Aggregate(TimeSpan.Zero, (sum, time) => sum + time);
 
-        if (string.IsNullOrWhiteSpace(request.Content))
-        {
-            return BadRequest(new ApiResponse<Comment>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.ValidationError,
-                    Message = "Comment content is required",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        var comment = _mockDataService.AddIncidentComment(id, request);
-
-        // Update incident's updated timestamp
-        incident.UpdatedAt = DateTime.UtcNow;
-        incident.Timeline.Add(new TimelineEntry
-        {
-            Id = Guid.NewGuid(),
-            Timestamp = DateTime.UtcNow,
-            Action = "Comment added",
-            Description = request.IsInternal ? "Internal comment added" : "Comment added",
-            PerformedBy = comment.AuthorId
-        });
-
-        _logger.LogInformation($"Added comment to incident {id}");
-
-        return CreatedAtAction(
-            nameof(GetIncidentComments),
-            new { id = id },
-            new ApiResponse<Comment>
-            {
-                Status = ApiStatus.Success,
-                Data = comment,
-                Metadata = new ApiMetadata
-                {
-                    Timestamp = DateTime.UtcNow,
-                    RequestId = Guid.NewGuid().ToString()
-                }
-            });
-    }
-
-    private static string GenerateETag()
-    {
-        return $"\"{Guid.NewGuid():N}\"";
+        return TimeSpan.FromMilliseconds(totalTime.TotalMilliseconds / resolvedIncidents.Count);
     }
 }
 
-/// <summary>
-/// Update incident request
-/// </summary>
-public record UpdateIncidentRequest
+public class StatusUpdateRequest
 {
-    public string? Title { get; init; }
-    public string? Description { get; init; }
-    public IncidentStatus? Status { get; init; }
-    public IncidentSeverity? Severity { get; init; }
-    public Guid? Assignee { get; init; }
-    public string? Resolution { get; init; }
-    public string? RootCause { get; init; }
+    public string Status { get; set; } = string.Empty;
+}
+
+public class AssignmentRequest
+{
+    public string AssignedTo { get; set; } = string.Empty;
+}
+
+public class CommentRequest
+{
+    public string Author { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
 }

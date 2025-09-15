@@ -1,393 +1,285 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using CentralCommand.MockApi.Models;
 using CentralCommand.MockApi.Services;
+using CentralCommand.MockApi.Hubs;
 
 namespace CentralCommand.MockApi.Controllers;
 
-/// <summary>
-/// Controller for portal management endpoints
-/// </summary>
 [ApiController]
 [Route("api/v1/[controller]")]
 public class PortalsController : ControllerBase
 {
     private readonly MockDataService _mockDataService;
+    private readonly IHubContext<MetricsHub> _hubContext;
     private readonly ILogger<PortalsController> _logger;
 
-    public PortalsController(MockDataService mockDataService, ILogger<PortalsController> logger)
+    public PortalsController(
+        MockDataService mockDataService,
+        IHubContext<MetricsHub> hubContext,
+        ILogger<PortalsController> logger)
     {
         _mockDataService = mockDataService;
+        _hubContext = hubContext;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Get all portals with optional filtering
-    /// </summary>
     [HttpGet]
-    public ActionResult<ApiResponse<List<Portal>>> GetPortals(
-        [FromQuery] string? category = null,
+    public ActionResult<IEnumerable<Portal>> GetPortals(
         [FromQuery] string? status = null,
         [FromQuery] string? environment = null,
-        [FromQuery] string? priority = null,
-        [FromQuery] string? searchTerm = null,
-        [FromQuery] bool? isFavorite = null,
+        [FromQuery] string? category = null,
+        [FromQuery] bool? favorite = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         var portals = _mockDataService.GetPortals();
 
         // Apply filters
-        if (!string.IsNullOrEmpty(category) && Enum.TryParse<PortalCategory>(category, true, out var cat))
-        {
-            portals = portals.Where(p => p.Category == cat).ToList();
-        }
+        if (!string.IsNullOrEmpty(status))
+            portals = portals.Where(p => p.Status == status).ToList();
 
-        if (!string.IsNullOrEmpty(status) && Enum.TryParse<PortalStatus>(status, true, out var stat))
-        {
-            portals = portals.Where(p => p.Status == stat).ToList();
-        }
+        if (!string.IsNullOrEmpty(environment))
+            portals = portals.Where(p => p.Environment == environment).ToList();
 
-        if (!string.IsNullOrEmpty(environment) && Enum.TryParse<PortalEnvironment>(environment, true, out var env))
-        {
-            portals = portals.Where(p => p.Environment == env).ToList();
-        }
+        if (!string.IsNullOrEmpty(category))
+            portals = portals.Where(p => p.Category == category).ToList();
 
-        if (!string.IsNullOrEmpty(priority) && Enum.TryParse<PortalPriority>(priority, true, out var prio))
-        {
-            portals = portals.Where(p => p.Priority == prio).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(searchTerm))
-        {
-            var searchLower = searchTerm.ToLower();
-            portals = portals.Where(p =>
-                p.Name.ToLower().Contains(searchLower) ||
-                (p.Description?.ToLower().Contains(searchLower) ?? false) ||
-                p.Tags.Any(t => t.ToLower().Contains(searchLower))
-            ).ToList();
-        }
-
-        if (isFavorite.HasValue)
-        {
-            portals = portals.Where(p => p.IsFavorite == isFavorite.Value).ToList();
-        }
+        if (favorite.HasValue)
+            portals = portals.Where(p => p.IsFavorite == favorite.Value).ToList();
 
         // Apply pagination
-        var totalItems = portals.Count;
-        var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-        var paginatedPortals = portals
+        var totalCount = portals.Count;
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        var pagedPortals = portals
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
 
-        var response = new ApiResponse<List<Portal>>
-        {
-            Status = ApiStatus.Success,
-            Data = paginatedPortals,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString(),
-                Pagination = new PaginationResponse
-                {
-                    Page = page,
-                    PageSize = pageSize,
-                    TotalPages = totalPages,
-                    TotalItems = totalItems,
-                    HasNext = page < totalPages,
-                    HasPrevious = page > 1
-                }
-            }
-        };
+        Response.Headers.Append("X-Total-Count", totalCount.ToString());
+        Response.Headers.Append("X-Page", page.ToString());
+        Response.Headers.Append("X-Page-Size", pageSize.ToString());
+        Response.Headers.Append("X-Total-Pages", totalPages.ToString());
 
-        return Ok(response);
+        return Ok(pagedPortals);
     }
 
-    /// <summary>
-    /// Get a specific portal by ID
-    /// </summary>
     [HttpGet("{id}")]
-    public ActionResult<ApiResponse<Portal>> GetPortal(Guid id)
+    public ActionResult<Portal> GetPortal(string id)
     {
         var portal = _mockDataService.GetPortal(id);
-
         if (portal == null)
-        {
-            return NotFound(new ApiResponse<Portal>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
+            return NotFound(new { message = $"Portal with id '{id}' not found" });
 
-        return Ok(new ApiResponse<Portal>
-        {
-            Status = ApiStatus.Success,
-            Data = portal,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
-        });
+        return Ok(portal);
     }
 
-    /// <summary>
-    /// Update portal metrics
-    /// </summary>
+    [HttpPost]
+    public ActionResult<Portal> CreatePortal([FromBody] Portal portal)
+    {
+        if (string.IsNullOrWhiteSpace(portal.Name))
+            return BadRequest(new { message = "Portal name is required" });
+
+        if (string.IsNullOrWhiteSpace(portal.Url))
+            return BadRequest(new { message = "Portal URL is required" });
+
+        var createdPortal = _mockDataService.CreatePortal(portal);
+        _logger.LogInformation($"Created new portal: {createdPortal.Name} (ID: {createdPortal.Id})");
+
+        return CreatedAtAction(nameof(GetPortal), new { id = createdPortal.Id }, createdPortal);
+    }
+
+    [HttpPut("{id}")]
+    public ActionResult<Portal> UpdatePortal(string id, [FromBody] Portal portal)
+    {
+        var updatedPortal = _mockDataService.UpdatePortal(id, portal);
+        if (updatedPortal == null)
+            return NotFound(new { message = $"Portal with id '{id}' not found" });
+
+        _logger.LogInformation($"Updated portal: {updatedPortal.Name} (ID: {id})");
+        return Ok(updatedPortal);
+    }
+
+    [HttpDelete("{id}")]
+    public IActionResult DeletePortal(string id)
+    {
+        var deleted = _mockDataService.DeletePortal(id);
+        if (!deleted)
+            return NotFound(new { message = $"Portal with id '{id}' not found" });
+
+        _logger.LogInformation($"Deleted portal with ID: {id}");
+        return NoContent();
+    }
+
     [HttpPost("{id}/metrics")]
-    public ActionResult<ApiResponse<PortalMetrics>> UpdatePortalMetrics(Guid id, [FromBody] PortalMetrics? metrics = null)
+    public async Task<IActionResult> UpdatePortalMetrics(string id, [FromBody] PortalMetrics metrics)
     {
         var portal = _mockDataService.GetPortal(id);
-
         if (portal == null)
-        {
-            return NotFound(new ApiResponse<PortalMetrics>
-            {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
+            return NotFound(new { message = $"Portal with id '{id}' not found" });
 
-        // Update with provided metrics or generate new ones
-        if (metrics != null)
-        {
-            portal.Metrics = metrics;
-        }
-        else
-        {
-            _mockDataService.UpdatePortalMetrics(id);
-        }
-
-        portal.LastChecked = DateTime.UtcNow;
+        portal.Metrics = metrics;
+        portal.Metrics.LastChecked = DateTime.UtcNow;
         portal.UpdatedAt = DateTime.UtcNow;
-        portal.ETag = GenerateETag();
 
-        _logger.LogInformation($"Updated metrics for portal {id}");
+        // Broadcast the update via SignalR
+        await _hubContext.Clients.All.SendAsync("PortalMetricsUpdated", id, metrics);
 
-        return Ok(new ApiResponse<PortalMetrics>
-        {
-            Status = ApiStatus.Success,
-            Data = portal.Metrics,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
-        });
+        _logger.LogInformation($"Updated metrics for portal: {portal.Name} (ID: {id})");
+        return Ok(portal);
     }
 
-    /// <summary>
-    /// Get portal statistics
-    /// </summary>
-    [HttpGet("stats")]
-    public ActionResult<ApiResponse<PortalStats>> GetPortalStats()
-    {
-        var statisticsService = HttpContext.RequestServices.GetRequiredService<StatisticsService>();
-        var stats = statisticsService.GetPortalStats();
-
-        return Ok(new ApiResponse<PortalStats>
-        {
-            Status = ApiStatus.Success,
-            Data = stats,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
-        });
-    }
-
-    /// <summary>
-    /// Get portal metrics history
-    /// </summary>
     [HttpGet("{id}/metrics/history")]
-    public ActionResult<ApiResponse<MetricsHistory>> GetPortalMetricsHistory(
-        Guid id,
-        [FromQuery] MetricsTimeRange timeRange = MetricsTimeRange.Last24Hours)
+    public ActionResult<object> GetPortalMetricsHistory(string id, [FromQuery] int hours = 24)
     {
-        var metricsHistory = _mockDataService.GetPortalMetricsHistory(id, timeRange);
+        var portal = _mockDataService.GetPortal(id);
+        if (portal == null)
+            return NotFound(new { message = $"Portal with id '{id}' not found" });
 
-        if (metricsHistory == null)
+        // Generate mock historical data
+        var history = new List<object>();
+        var random = new Random();
+
+        for (int i = hours; i >= 0; i--)
         {
-            return NotFound(new ApiResponse<MetricsHistory>
+            history.Add(new
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found or no metrics history available",
-                    Timestamp = DateTime.UtcNow
-                }
+                timestamp = DateTime.UtcNow.AddHours(-i),
+                responseTime = random.Next(100, 500),
+                uptime = random.Next(95, 100),
+                errorRate = random.Next(0, 5),
+                activeUsers = random.Next(50, 500),
+                cpuUsage = random.Next(20, 80),
+                memoryUsage = random.Next(30, 70)
             });
         }
 
-        _logger.LogInformation($"Retrieved metrics history for portal {id} with time range {timeRange}");
-
-        return Ok(new ApiResponse<MetricsHistory>
+        return Ok(new
         {
-            Status = ApiStatus.Success,
-            Data = metricsHistory,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
+            portalId = id,
+            portalName = portal.Name,
+            period = $"{hours} hours",
+            dataPoints = history
         });
     }
 
-    /// <summary>
-    /// Get portal health check configuration
-    /// </summary>
     [HttpGet("{id}/health")]
-    public ActionResult<ApiResponse<PortalHealth>> GetPortalHealth(Guid id)
+    public ActionResult<object> GetPortalHealth(string id)
     {
-        var portalHealth = _mockDataService.GetPortalHealth(id);
+        var portal = _mockDataService.GetPortal(id);
+        if (portal == null)
+            return NotFound(new { message = $"Portal with id '{id}' not found" });
 
-        if (portalHealth == null)
+        var healthScore = CalculateHealthScore(portal);
+
+        return Ok(new
         {
-            return NotFound(new ApiResponse<PortalHealth>
+            portalId = id,
+            portalName = portal.Name,
+            status = portal.Status,
+            healthScore,
+            metrics = portal.Metrics,
+            checks = new
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.NotFound,
-                    Message = $"Portal with ID {id} not found or health data not available",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
-        }
-
-        _logger.LogInformation($"Retrieved health check configuration for portal {id}");
-
-        return Ok(new ApiResponse<PortalHealth>
-        {
-            Status = ApiStatus.Success,
-            Data = portalHealth,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
+                responseTime = portal.Metrics.ResponseTime < 1000 ? "pass" : "fail",
+                uptime = portal.Metrics.Uptime > 99 ? "pass" : "warn",
+                errorRate = portal.Metrics.ErrorRate < 1 ? "pass" : "fail",
+                cpuUsage = portal.Metrics.CpuUsage < 80 ? "pass" : "warn",
+                memoryUsage = portal.Metrics.MemoryUsage < 80 ? "pass" : "warn"
+            },
+            lastChecked = portal.Metrics.LastChecked
         });
     }
 
-    /// <summary>
-    /// Perform batch operations on multiple portals
-    /// </summary>
     [HttpPost("batch")]
-    public ActionResult<ApiResponse<BatchOperationResponse>> PerformBatchOperation([FromBody] BatchOperationRequest request)
+    public ActionResult<object> BatchOperation([FromBody] BatchRequest request)
     {
-        if (request.PortalIds == null || !request.PortalIds.Any())
+        var results = new List<object>();
+
+        foreach (var operation in request.Operations)
         {
-            return BadRequest(new ApiResponse<BatchOperationResponse>
+            switch (operation.Action.ToLower())
             {
-                Status = ApiStatus.Error,
-                Error = new ApiError
-                {
-                    Code = ErrorCode.ValidationError,
-                    Message = "Portal IDs are required for batch operations",
-                    Timestamp = DateTime.UtcNow
-                }
-            });
+                case "update-status":
+                    foreach (var id in operation.PortalIds)
+                    {
+                        var portal = _mockDataService.GetPortal(id);
+                        if (portal != null && operation.Value != null)
+                        {
+                            portal.Status = operation.Value;
+                            portal.UpdatedAt = DateTime.UtcNow;
+                            results.Add(new { id, success = true, action = "update-status" });
+                        }
+                        else
+                        {
+                            results.Add(new { id, success = false, action = "update-status", error = "Portal not found" });
+                        }
+                    }
+                    break;
+
+                case "toggle-favorite":
+                    foreach (var id in operation.PortalIds)
+                    {
+                        var portal = _mockDataService.GetPortal(id);
+                        if (portal != null)
+                        {
+                            portal.IsFavorite = !portal.IsFavorite;
+                            portal.UpdatedAt = DateTime.UtcNow;
+                            results.Add(new { id, success = true, action = "toggle-favorite", isFavorite = portal.IsFavorite });
+                        }
+                        else
+                        {
+                            results.Add(new { id, success = false, action = "toggle-favorite", error = "Portal not found" });
+                        }
+                    }
+                    break;
+
+                default:
+                    results.Add(new { action = operation.Action, success = false, error = "Unknown action" });
+                    break;
+            }
         }
 
-        var response = _mockDataService.PerformBatchOperation(request);
-
-        _logger.LogInformation($"Performed batch operation {request.Operation} on {request.PortalIds.Count} portals. Success: {response.SuccessCount}, Failed: {response.FailureCount}");
-
-        return Ok(new ApiResponse<BatchOperationResponse>
+        return Ok(new
         {
-            Status = ApiStatus.Success,
-            Data = response,
-            Metadata = new ApiMetadata
-            {
-                Timestamp = DateTime.UtcNow,
-                RequestId = Guid.NewGuid().ToString()
-            }
+            totalOperations = request.Operations.Count,
+            successful = results.Count(r => ((dynamic)r).success == true),
+            failed = results.Count(r => ((dynamic)r).success == false),
+            results
         });
     }
 
-    private static string GenerateETag()
+    private double CalculateHealthScore(Portal portal)
     {
-        return $"\"{Guid.NewGuid():N}\"";
+        double score = 100.0;
+
+        // Deduct points based on metrics
+        if (portal.Metrics.ResponseTime > 1000) score -= 10;
+        if (portal.Metrics.ResponseTime > 2000) score -= 10;
+        if (portal.Metrics.Uptime < 99.9) score -= 15;
+        if (portal.Metrics.Uptime < 99) score -= 10;
+        if (portal.Metrics.ErrorRate > 1) score -= 10;
+        if (portal.Metrics.ErrorRate > 3) score -= 10;
+        if (portal.Metrics.CpuUsage > 80) score -= 5;
+        if (portal.Metrics.MemoryUsage > 80) score -= 5;
+
+        // Status impacts
+        if (portal.Status == "degraded") score -= 20;
+        if (portal.Status == "down") score -= 50;
+        if (portal.Status == "maintenance") score -= 10;
+
+        return Math.Max(0, score);
     }
 }
 
-/// <summary>
-/// API response wrapper
-/// </summary>
-public class ApiResponse<T>
+public class BatchRequest
 {
-    public ApiStatus Status { get; set; }
-    public T? Data { get; set; }
-    public ApiError? Error { get; set; }
-    public ApiMetadata? Metadata { get; set; }
+    public List<BatchOperation> Operations { get; set; } = new();
 }
 
-/// <summary>
-/// API status enum
-/// </summary>
-public enum ApiStatus
+public class BatchOperation
 {
-    Success,
-    Error,
-    Pending,
-    Cancelled
-}
-
-/// <summary>
-/// API error codes
-/// </summary>
-public enum ErrorCode
-{
-    NotFound = 3001,
-    ValidationError = 2001,
-    InternalError = 5001,
-    Unauthorized = 1001
-}
-
-/// <summary>
-/// API error structure
-/// </summary>
-public class ApiError
-{
-    public ErrorCode Code { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public DateTime Timestamp { get; set; }
-    public string? TraceId { get; set; }
-}
-
-/// <summary>
-/// API metadata
-/// </summary>
-public class ApiMetadata
-{
-    public DateTime Timestamp { get; set; }
-    public string RequestId { get; set; } = string.Empty;
-    public string? Version { get; set; }
-    public PaginationResponse? Pagination { get; set; }
-}
-
-/// <summary>
-/// Pagination response
-/// </summary>
-public class PaginationResponse
-{
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages { get; set; }
-    public int TotalItems { get; set; }
-    public bool HasNext { get; set; }
-    public bool HasPrevious { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public List<string> PortalIds { get; set; } = new();
+    public string? Value { get; set; }
 }

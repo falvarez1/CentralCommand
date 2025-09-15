@@ -1,6 +1,6 @@
-using CentralCommand.MockApi.Models;
+using CentralCommand.Api.Models;
 
-namespace CentralCommand.MockApi.Services;
+namespace CentralCommand.Api.Services;
 
 /// <summary>
 /// Service for generating system statistics and metrics

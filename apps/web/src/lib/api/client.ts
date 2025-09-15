@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { env } from '../../config/env';
 import { toast } from 'sonner';
+import { getCsrfToken, setCsrfToken } from '../cookies';
 
 // Custom error class for API errors
 export class ApiError extends Error {
@@ -15,6 +16,21 @@ export class ApiError extends Error {
   }
 }
 
+// Token refresh state to prevent race conditions
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+// Subscribe to token refresh
+function subscribeTokenRefresh(callback: (token: string) => void): void {
+  refreshSubscribers.push(callback);
+}
+
+// Notify all subscribers when token is refreshed
+function onTokenRefreshed(token: string): void {
+  refreshSubscribers.forEach(callback => callback(token));
+  refreshSubscribers = [];
+}
+
 // Create axios instance with base configuration
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
@@ -24,16 +40,16 @@ const createApiClient = (): AxiosInstance => {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    withCredentials: true, // Required for SignalR and CORS with credentials
+    withCredentials: true, // Required for HttpOnly cookies and CORS
   });
 
-  // Request interceptor for auth and logging
+  // Request interceptor for CSRF token and logging
   client.interceptors.request.use(
     (config) => {
-      // Add auth token if available
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      // Add CSRF token for state-changing requests
+      const csrfToken = getCsrfToken();
+      if (csrfToken && ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
+        config.headers['X-CSRF-Token'] = csrfToken;
       }
 
       // Log request in development
@@ -52,9 +68,15 @@ const createApiClient = (): AxiosInstance => {
     }
   );
 
-  // Response interceptor for error handling
+  // Response interceptor for error handling and CSRF token extraction
   client.interceptors.response.use(
     (response) => {
+      // Extract and store CSRF token from response headers
+      const csrfToken = response.headers['x-csrf-token'];
+      if (csrfToken) {
+        setCsrfToken(csrfToken);
+      }
+
       // Log response in development
       if (import.meta.env.DEV) {
         console.log(`✅ Response from ${response.config.url}:`, response.data);
@@ -62,34 +84,59 @@ const createApiClient = (): AxiosInstance => {
       return response;
     },
     async (error: AxiosError) => {
-      const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+      const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean; _queued?: boolean };
 
       // Handle 401 Unauthorized - token expired
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/')) {
+        // Handle race condition - if already refreshing, queue the request
+        if (isRefreshing) {
+          return new Promise((resolve) => {
+            subscribeTokenRefresh((token: string) => {
+              // Retry original request after token refresh
+              resolve(client(originalRequest));
+            });
+          });
+        }
+
         originalRequest._retry = true;
+        isRefreshing = true;
 
         try {
-          // Attempt to refresh token
-          const refreshToken = localStorage.getItem('refreshToken');
-          if (refreshToken) {
-            const response = await axios.post(`${env.api.baseUrl}/auth/refresh`, {
-              refreshToken,
-            });
-
-            const { accessToken } = response.data;
-            localStorage.setItem('authToken', accessToken);
-
-            // Retry original request with new token
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          // Attempt to refresh token - backend will handle HttpOnly cookies
+          const response = await axios.post(
+            `${env.api.baseUrl}/api/auth/refresh`,
+            {},
+            {
+              withCredentials: true,
+              headers: {
+                'X-CSRF-Token': getCsrfToken() || ''
+              }
             }
-            return client(originalRequest);
+          );
+
+          // Extract new CSRF token if provided
+          const newCsrfToken = response.headers['x-csrf-token'];
+          if (newCsrfToken) {
+            setCsrfToken(newCsrfToken);
           }
+
+          isRefreshing = false;
+
+          // Notify all queued requests that token is refreshed
+          onTokenRefreshed('refreshed');
+
+          // Retry original request
+          return client(originalRequest);
         } catch (refreshError) {
+          isRefreshing = false;
+          refreshSubscribers = [];
+
           // Refresh failed, redirect to login
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
+          const currentPath = window.location.pathname;
+          if (currentPath !== '/auth/login') {
+            window.location.href = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
+          }
+
           return Promise.reject(refreshError);
         }
       }

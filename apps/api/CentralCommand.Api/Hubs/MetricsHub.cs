@@ -1,240 +1,275 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using CentralCommand.Api.Models.DTOs;
-using CentralCommand.Api.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
+using CentralCommand.Api.Models;
+using CentralCommand.Api.Services;
 
 namespace CentralCommand.Api.Hubs;
 
-[Authorize]
-public class MetricsHub : Hub<IMetricsHubClient>
+/// <summary>
+/// SignalR hub for real-time metrics updates
+/// </summary>
+public class MetricsHub : Hub
 {
-    private readonly IPortalService _portalService;
-    private readonly IConnectionManager _connectionManager;
     private readonly ILogger<MetricsHub> _logger;
 
-    public MetricsHub(
-        IPortalService portalService,
-        IConnectionManager connectionManager,
-        ILogger<MetricsHub> logger)
+    public MetricsHub(ILogger<MetricsHub> logger)
     {
-        _portalService = portalService;
-        _connectionManager = connectionManager;
         _logger = logger;
     }
 
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.UserIdentifier;
-        var connectionId = Context.ConnectionId;
-
-        if (userId != null)
-        {
-            await _connectionManager.AddConnectionAsync(userId, connectionId);
-            _logger.LogInformation("User {UserId} connected with connection {ConnectionId}", userId, connectionId);
-
-            // Send initial state to the connected client
-            try
-            {
-                var portals = await _portalService.GetUserPortalsAsync(userId);
-                await Clients.Caller.InitialDataLoaded(new InitialDataPayload
-                {
-                    Portals = portals,
-                    Timestamp = DateTime.UtcNow
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending initial data to user {UserId}", userId);
-            }
-        }
-
+        _logger.LogInformation($"Client connected: {Context.ConnectionId}");
+        await Clients.Caller.SendAsync("Connected", Context.ConnectionId);
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var userId = Context.UserIdentifier;
-        var connectionId = Context.ConnectionId;
-
-        if (userId != null)
-        {
-            await _connectionManager.RemoveConnectionAsync(userId, connectionId);
-            _logger.LogInformation("User {UserId} disconnected from connection {ConnectionId}", userId, connectionId);
-        }
-
-        if (exception != null)
-        {
-            _logger.LogError(exception, "User {UserId} disconnected with error", userId);
-        }
-
+        _logger.LogInformation($"Client disconnected: {Context.ConnectionId}");
         await base.OnDisconnectedAsync(exception);
     }
 
-    public async Task SubscribeToPortal(Guid portalId)
+    public async Task SubscribeToPortal(string portalId)
     {
-        var groupName = GetPortalGroupName(portalId);
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-
-        _logger.LogDebug("Connection {ConnectionId} subscribed to portal {PortalId}",
-            Context.ConnectionId, portalId);
-
-        // Send current metrics for the subscribed portal
-        try
-        {
-            var metrics = await _portalService.GetPortalMetricsAsync(portalId);
-            await Clients.Caller.PortalMetricsUpdated(new PortalMetricsUpdate
-            {
-                PortalId = portalId,
-                Metrics = metrics,
-                Timestamp = DateTime.UtcNow
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error sending metrics for portal {PortalId}", portalId);
-        }
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"portal-{portalId}");
+        _logger.LogInformation($"Client {Context.ConnectionId} subscribed to portal {portalId}");
     }
 
-    public async Task UnsubscribeFromPortal(Guid portalId)
+    public async Task UnsubscribeFromPortal(string portalId)
     {
-        var groupName = GetPortalGroupName(portalId);
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
-
-        _logger.LogDebug("Connection {ConnectionId} unsubscribed from portal {PortalId}",
-            Context.ConnectionId, portalId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"portal-{portalId}");
+        _logger.LogInformation($"Client {Context.ConnectionId} unsubscribed from portal {portalId}");
     }
 
-    public async Task SubscribeToIncidents(IncidentSeverity? severity = null)
+    public async Task SubscribeToIncidents()
     {
-        var groupName = severity.HasValue
-            ? $"incidents-{severity.Value.ToString().ToLower()}"
-            : "incidents-all";
-
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-
-        _logger.LogDebug("Connection {ConnectionId} subscribed to incidents group {GroupName}",
-            Context.ConnectionId, groupName);
+        await Groups.AddToGroupAsync(Context.ConnectionId, "incidents");
+        _logger.LogInformation($"Client {Context.ConnectionId} subscribed to incidents");
     }
 
     public async Task UnsubscribeFromIncidents()
     {
-        var groups = new[] { "incidents-all", "incidents-critical", "incidents-high", "incidents-medium", "incidents-low" };
-
-        foreach (var group in groups)
-        {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, group);
-        }
-
-        _logger.LogDebug("Connection {ConnectionId} unsubscribed from all incident groups", Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "incidents");
+        _logger.LogInformation($"Client {Context.ConnectionId} unsubscribed from incidents");
     }
 
-    public async Task SubscribeToSystemAlerts()
+    public async Task SubscribeToStatistics()
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, "system-alerts");
-        _logger.LogDebug("Connection {ConnectionId} subscribed to system alerts", Context.ConnectionId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, "statistics");
+        _logger.LogInformation($"Client {Context.ConnectionId} subscribed to statistics");
     }
 
-    public async Task RequestMetricsRefresh(Guid portalId)
+    public async Task UnsubscribeFromStatistics()
     {
-        _logger.LogInformation("Metrics refresh requested for portal {PortalId} by connection {ConnectionId}",
-            portalId, Context.ConnectionId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "statistics");
+        _logger.LogInformation($"Client {Context.ConnectionId} unsubscribed from statistics");
+    }
 
-        try
+    public async Task SubscribeToSystemUpdates()
+    {
+        // Subscribe to all system-wide updates
+        await Groups.AddToGroupAsync(Context.ConnectionId, "system");
+        await Groups.AddToGroupAsync(Context.ConnectionId, "incidents");
+        await Groups.AddToGroupAsync(Context.ConnectionId, "statistics");
+        _logger.LogInformation($"Client {Context.ConnectionId} subscribed to system updates");
+    }
+
+    public async Task SubscribeToPortals(string[] portalIds)
+    {
+        foreach (var portalId in portalIds)
         {
-            // Trigger immediate metrics collection for the portal
-            await _portalService.RefreshPortalMetricsAsync(portalId);
-
-            // Notify the caller that refresh was initiated
-            await Clients.Caller.MetricsRefreshInitiated(portalId);
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"portal-{portalId}");
         }
-        catch (Exception ex)
+        _logger.LogInformation($"Client {Context.ConnectionId} subscribed to {portalIds.Length} portals");
+    }
+}
+
+/// <summary>
+/// Background service for sending periodic metric updates
+/// </summary>
+public class MetricsUpdateService : BackgroundService
+{
+    private readonly IHubContext<MetricsHub> _hubContext;
+    private readonly MockDataService _mockDataService;
+    private readonly StatisticsService _statisticsService;
+    private readonly ILogger<MetricsUpdateService> _logger;
+    private readonly Random _random = new();
+
+    public MetricsUpdateService(
+        IHubContext<MetricsHub> hubContext,
+        MockDataService mockDataService,
+        StatisticsService statisticsService,
+        ILogger<MetricsUpdateService> logger)
+    {
+        _hubContext = hubContext;
+        _mockDataService = mockDataService;
+        _statisticsService = statisticsService;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogError(ex, "Error refreshing metrics for portal {PortalId}", portalId);
-            await Clients.Caller.ErrorOccurred(new ErrorMessage
+            try
             {
-                Code = "METRICS_REFRESH_FAILED",
-                Message = $"Failed to refresh metrics for portal {portalId}",
-                Timestamp = DateTime.UtcNow
-            });
+                // Send portal metrics updates
+                await SendPortalMetricsUpdate();
+
+                // Send system statistics update
+                await SendStatisticsUpdate();
+
+                // Occasionally send incident updates
+                if (_random.Next(100) > 80) // 20% chance
+                {
+                    await SendIncidentUpdate();
+                }
+
+                // Wait 30 seconds before next update
+                await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in metrics update service");
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            }
         }
     }
 
-    private static string GetPortalGroupName(Guid portalId) => $"portal-{portalId}";
-}
+    private async Task SendPortalMetricsUpdate()
+    {
+        var portals = _mockDataService.GetPortals();
 
-// Client interface for strongly-typed hub
-public interface IMetricsHubClient
-{
-    Task InitialDataLoaded(InitialDataPayload payload);
-    Task PortalMetricsUpdated(PortalMetricsUpdate update);
-    Task PortalStatusChanged(PortalStatusChange change);
-    Task IncidentCreated(IncidentNotification notification);
-    Task IncidentUpdated(IncidentNotification notification);
-    Task SystemAlert(SystemAlertNotification alert);
-    Task MetricsRefreshInitiated(Guid portalId);
-    Task ErrorOccurred(ErrorMessage error);
-}
+        // Update metrics for a random subset of portals
+        var portalsToUpdate = portals.OrderBy(_ => _random.Next()).Take(_random.Next(3, 8)).ToList();
 
-// SignalR message payloads
-public record InitialDataPayload
-{
-    public List<PortalDto> Portals { get; init; } = new();
-    public DateTime Timestamp { get; init; }
-}
+        foreach (var portal in portalsToUpdate)
+        {
+            _mockDataService.UpdatePortalMetrics(portal.Id);
 
-public record PortalMetricsUpdate
-{
-    public Guid PortalId { get; init; }
-    public PortalMetricsDto? Metrics { get; init; }
-    public DateTime Timestamp { get; init; }
-}
+            var update = new
+            {
+                portalId = portal.Id,
+                metrics = portal.Metrics,
+                status = portal.Status.ToString().ToLower(),
+                lastChecked = portal.LastChecked,
+                timestamp = DateTime.UtcNow
+            };
 
-public record BulkPortalMetricsUpdate
-{
-    public List<PortalMetricsUpdate> Updates { get; init; } = new();
-    public DateTime Timestamp { get; init; }
-}
+            // Send to portal-specific group
+            await _hubContext.Clients.Group($"portal-{portal.Id}").SendAsync("PortalMetricsUpdate", update);
 
-public record PortalStatusChange
-{
-    public Guid PortalId { get; init; }
-    public string PortalName { get; init; } = string.Empty;
-    public PortalStatus OldStatus { get; init; }
-    public PortalStatus NewStatus { get; init; }
-    public string? Reason { get; init; }
-    public DateTime Timestamp { get; init; }
-}
+            // Also send as MetricUpdate for general listeners
+            var metricUpdate = new
+            {
+                portalId = portal.Id.ToString(),
+                metric = "all",
+                value = portal.Metrics?.ResponseTime ?? 0,
+                timestamp = DateTime.UtcNow.ToString("O")
+            };
+            await _hubContext.Clients.Group("system").SendAsync("MetricUpdate", metricUpdate);
+        }
 
-public record IncidentNotification
-{
-    public Guid IncidentId { get; init; }
-    public string Title { get; init; } = string.Empty;
-    public IncidentSeverity Severity { get; init; }
-    public IncidentStatus Status { get; init; }
-    public Guid? PortalId { get; init; }
-    public string? PortalName { get; init; }
-    public string? AssignedTo { get; init; }
-    public DateTime Timestamp { get; init; }
-}
+        _logger.LogDebug($"Sent metrics updates for {portalsToUpdate.Count} portals");
+    }
 
-public record SystemAlertNotification
-{
-    public Guid AlertId { get; init; }
-    public AlertType Type { get; init; }
-    public AlertSeverity Severity { get; init; }
-    public string Title { get; init; } = string.Empty;
-    public string Message { get; init; } = string.Empty;
-    public Dictionary<string, object>? Metadata { get; init; }
-    public DateTime Timestamp { get; init; }
-}
+    private async Task SendStatisticsUpdate()
+    {
+        var stats = _statisticsService.GetSystemStats();
+        var sparklines = _statisticsService.GetSparklines();
 
-public record ErrorMessage
-{
-    public string Code { get; init; } = string.Empty;
-    public string Message { get; init; } = string.Empty;
-    public DateTime Timestamp { get; init; }
+        var update = new
+        {
+            statistics = stats,
+            sparklines = sparklines,
+            timestamp = DateTime.UtcNow
+        };
+
+        await _hubContext.Clients.Group("statistics").SendAsync("StatisticsUpdate", update);
+
+        // Also send as SystemHealthUpdate for compatibility
+        var healthUpdate = new
+        {
+            cpuUsage = stats.AverageCpu,
+            memoryUsage = stats.AverageMemory,
+            diskUsage = stats.DiskUsage,
+            networkLatency = stats.NetworkLatency,
+            timestamp = DateTime.UtcNow.ToString("O")
+        };
+        await _hubContext.Clients.Group("system").SendAsync("SystemHealthUpdate", healthUpdate);
+
+        _logger.LogDebug("Sent statistics update");
+    }
+
+    private async Task SendIncidentUpdate()
+    {
+        var incidents = _mockDataService.GetIncidents();
+        var activeIncidents = incidents.Where(i => i.Status != IncidentStatus.Resolved && i.Status != IncidentStatus.Closed).ToList();
+
+        if (activeIncidents.Any())
+        {
+            var incident = activeIncidents[_random.Next(activeIncidents.Count)];
+
+            // Simulate status change
+            var newStatus = GetNextStatus(incident.Status);
+            if (newStatus != incident.Status)
+            {
+                incident.Status = newStatus;
+                incident.UpdatedAt = DateTime.UtcNow;
+                incident.ETag = $"\"{Guid.NewGuid():N}\"";
+                incident.Timeline.Add(new TimelineEntry
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow,
+                    Action = $"Status changed to {newStatus}",
+                    Description = "Automated update",
+                    PerformedBy = Guid.NewGuid()
+                });
+
+                if (newStatus == IncidentStatus.Resolved)
+                {
+                    incident.ResolvedAt = DateTime.UtcNow;
+                    incident.Resolution = "Issue has been resolved";
+                }
+
+                var update = new
+                {
+                    incident = incident,
+                    action = "statusChanged",
+                    timestamp = DateTime.UtcNow
+                };
+
+                await _hubContext.Clients.Group("incidents").SendAsync("IncidentUpdate", update);
+
+                // Also send simplified IncidentUpdate for React app
+                var simpleUpdate = new
+                {
+                    incidentId = incident.Id.ToString(),
+                    status = incident.Status.ToString(),
+                    severity = incident.Severity.ToString(),
+                    updatedAt = incident.UpdatedAt.ToString("O")
+                };
+                await _hubContext.Clients.Group("system").SendAsync("IncidentUpdate", simpleUpdate);
+
+                // Send NewIncident notification if it's a new incident
+                if (incident.Status == IncidentStatus.Open && incident.CreatedAt > DateTime.UtcNow.AddMinutes(-1))
+                {
+                    await _hubContext.Clients.Group("system").SendAsync("NewIncident", incident);
+                }
+
+                _logger.LogDebug($"Sent incident update for {incident.Id}");
+            }
+        }
+    }
+
+    private IncidentStatus GetNextStatus(IncidentStatus current)
+    {
+        return current switch
+        {
+            IncidentStatus.Open => IncidentStatus.InProgress,
+            IncidentStatus.InProgress => _random.Next(100) > 30 ? IncidentStatus.Resolved : IncidentStatus.InProgress,
+            IncidentStatus.Resolved => _random.Next(100) > 50 ? IncidentStatus.Closed : IncidentStatus.Resolved,
+            _ => current
+        };
+    }
 }
