@@ -1,14 +1,15 @@
 /**
  * Authentication Store
- * Manages authentication state and user session
+ * Manages authentication state and user session with Supabase
  */
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import { authService } from '@/lib/api/services/auth.service';
+import { supabase, signIn, signUp, signOut, getCurrentUser, getSession } from '@/lib/supabase/client';
 import { clearSensitiveData, setCsrfToken } from '@/lib/cookies';
 import { env } from '@/config/env';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import type {
   User,
   LoginRequest,
@@ -18,6 +19,10 @@ import type {
 } from '@/types/auth.types';
 
 interface AuthStore extends AuthState {
+  // Supabase specific
+  supabaseUser: SupabaseUser | null;
+  session: Session | null;
+
   // Actions
   login: (credentials: LoginRequest) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<void>;
@@ -32,7 +37,7 @@ interface AuthStore extends AuthState {
   hasAnyRole: (roles: UserRole[]) => boolean;
 
   // Session management
-  updateSessionExpiry: (expiresIn: number) => void;
+  updateSession: (session: Session | null) => void;
   isTokenExpired: () => boolean;
   getTimeUntilExpiry: () => number;
   initializeAuth: () => Promise<void>;
@@ -48,12 +53,14 @@ export const useAuthStore = create<AuthStore>()(
     immer((set, get) => ({
       // Initial state
       user: null,
+      supabaseUser: null,
+      session: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
       tokenExpiry: null,
 
-      // Login action
+      // Login action with Supabase
       login: async (credentials: LoginRequest) => {
         set((state) => {
           state.isLoading = true;
@@ -61,18 +68,32 @@ export const useAuthStore = create<AuthStore>()(
         });
 
         try {
-          const response = await authService.login(credentials);
+          // Sign in with Supabase
+          const data = await signIn(credentials.email, credentials.password);
 
-          // Backend sets HttpOnly cookies, we just track expiry
-          // Extract CSRF token if provided
-          if (response.csrfToken) {
-            setCsrfToken(response.csrfToken);
+          if (!data.session || !data.user) {
+            throw new Error('Login failed');
           }
 
+          // Convert Supabase user to app user format
+          const appUser: User = {
+            id: data.user.id,
+            email: data.user.email || '',
+            name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || '',
+            avatar: data.user.user_metadata?.avatar_url,
+            role: (data.user.user_metadata?.role as UserRole) || 'viewer',
+            permissions: data.user.user_metadata?.permissions || [],
+            preferences: data.user.user_metadata?.preferences || {},
+            createdAt: data.user.created_at,
+            updatedAt: data.user.updated_at || data.user.created_at
+          };
+
           set((state) => {
-            state.user = response.user;
+            state.user = appUser;
+            state.supabaseUser = data.user;
+            state.session = data.session;
             state.isAuthenticated = true;
-            state.tokenExpiry = Date.now() + response.expiresIn * 1000;
+            state.tokenExpiry = data.session.expires_at ? data.session.expires_at * 1000 : null;
             state.isLoading = false;
             state.error = null;
           });
@@ -89,7 +110,7 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // Register action
+      // Register action with Supabase
       register: async (userData: RegisterRequest) => {
         set((state) => {
           state.isLoading = true;
@@ -97,21 +118,49 @@ export const useAuthStore = create<AuthStore>()(
         });
 
         try {
-          const response = await authService.register(userData);
+          // Sign up with Supabase
+          const data = await signUp(userData.email, userData.password, {
+            name: userData.name,
+            role: 'viewer',
+            permissions: [],
+            preferences: {}
+          });
 
-          // Backend sets HttpOnly cookies
-          // Extract CSRF token if provided
-          if (response.csrfToken) {
-            setCsrfToken(response.csrfToken);
+          if (!data.user) {
+            throw new Error('Registration failed');
           }
 
-          set((state) => {
-            state.user = response.user;
-            state.isAuthenticated = true;
-            state.tokenExpiry = Date.now() + (response.expiresIn || 3600) * 1000;
-            state.isLoading = false;
-            state.error = null;
-          });
+          // Note: User may need to confirm email before being fully authenticated
+          // depending on Supabase configuration
+          if (data.session) {
+            // User is immediately logged in
+            const appUser: User = {
+              id: data.user.id,
+              email: data.user.email || '',
+              name: userData.name,
+              role: 'viewer',
+              permissions: [],
+              preferences: {},
+              createdAt: data.user.created_at,
+              updatedAt: data.user.updated_at || data.user.created_at
+            };
+
+            set((state) => {
+              state.user = appUser;
+              state.supabaseUser = data.user;
+              state.session = data.session;
+              state.isAuthenticated = true;
+              state.tokenExpiry = data.session.expires_at ? data.session.expires_at * 1000 : null;
+              state.isLoading = false;
+              state.error = null;
+            });
+          } else {
+            // Email confirmation required
+            set((state) => {
+              state.isLoading = false;
+              state.error = 'Please check your email to confirm your account';
+            });
+          }
 
           // Clear any sensitive form data
           clearSensitiveData();
@@ -125,23 +174,24 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // Logout action
+      // Logout action with Supabase
       logout: async () => {
         set((state) => {
           state.isLoading = true;
         });
 
         try {
-          await authService.logout();
+          await signOut();
         } catch (error) {
           console.error('Logout error:', error);
         } finally {
-          // Backend clears HttpOnly cookies
           // Clear all sensitive data from browser
           clearSensitiveData();
 
           set((state) => {
             state.user = null;
+            state.supabaseUser = null;
+            state.session = null;
             state.isAuthenticated = false;
             state.tokenExpiry = null;
             state.isLoading = false;
@@ -150,24 +200,18 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // Refresh session
+      // Refresh session with Supabase
       refreshSession: async () => {
-        // Skip in mock mode
-        if (env.api.enableMock) {
-          return;
-        }
-
         try {
-          // Backend handles HttpOnly cookies automatically
-          const response = await authService.refreshToken();
+          const { data, error } = await supabase.auth.refreshSession();
 
-          // Extract CSRF token if provided
-          if (response.csrfToken) {
-            setCsrfToken(response.csrfToken);
-          }
+          if (error) throw error;
+          if (!data.session) throw new Error('No session');
 
           set((state) => {
-            state.tokenExpiry = Date.now() + response.expiresIn * 1000;
+            state.session = data.session;
+            state.supabaseUser = data.user;
+            state.tokenExpiry = data.session.expires_at ? data.session.expires_at * 1000 : null;
             state.error = null;
           });
         } catch (error: any) {
@@ -176,36 +220,48 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // Fetch current user
+      // Fetch current user with Supabase
       fetchCurrentUser: async () => {
-        // Skip in mock mode
-        if (env.api.enableMock) {
-          set((state) => {
-            state.isLoading = false;
-            state.isAuthenticated = false;
-          });
-          return;
-        }
-
         set((state) => {
           state.isLoading = true;
         });
 
         try {
-          const user = await authService.getCurrentUser();
+          const user = await getCurrentUser();
+          const session = await getSession();
+
+          if (!user || !session) {
+            throw new Error('No authenticated user');
+          }
+
+          // Convert Supabase user to app user format
+          const appUser: User = {
+            id: user.id,
+            email: user.email || '',
+            name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+            avatar: user.user_metadata?.avatar_url,
+            role: (user.user_metadata?.role as UserRole) || 'viewer',
+            permissions: user.user_metadata?.permissions || [],
+            preferences: user.user_metadata?.preferences || {},
+            createdAt: user.created_at,
+            updatedAt: user.updated_at || user.created_at
+          };
 
           set((state) => {
-            state.user = user;
+            state.user = appUser;
+            state.supabaseUser = user;
+            state.session = session;
             state.isAuthenticated = true;
+            state.tokenExpiry = session.expires_at ? session.expires_at * 1000 : null;
             state.isLoading = false;
             state.error = null;
           });
         } catch (error: any) {
           set((state) => {
             state.isLoading = false;
-            state.error = error.message || 'Failed to fetch user';
+            state.isAuthenticated = false;
+            state.error = null; // Don't show error for initial auth check
           });
-          throw error;
         }
       },
 
@@ -219,7 +275,14 @@ export const useAuthStore = create<AuthStore>()(
       // Permission helpers
       hasPermission: (resource: string, action: string) => {
         const { user } = get();
-        return authService.hasPermission(user, resource, action);
+        if (!user) return false;
+
+        // Admin has all permissions
+        if (user.role === 'admin') return true;
+
+        // Check specific permissions
+        const permission = `${resource}:${action}`;
+        return user.permissions?.includes(permission) || false;
       },
 
       hasRole: (role: UserRole | UserRole[]) => {
@@ -237,9 +300,10 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       // Session management
-      updateSessionExpiry: (expiresIn: number) => {
+      updateSession: (session: Session | null) => {
         set((state) => {
-          state.tokenExpiry = Date.now() + expiresIn * 1000;
+          state.session = session;
+          state.tokenExpiry = session?.expires_at ? session.expires_at * 1000 : null;
         });
       },
 
@@ -257,31 +321,79 @@ export const useAuthStore = create<AuthStore>()(
 
       // Initialize authentication from existing session
       initializeAuth: async () => {
-        // Skip auth initialization in mock mode
-        if (env.api.enableMock) {
-          set((state) => {
-            state.isLoading = false;
-            state.isAuthenticated = false;
-          });
-          return;
-        }
-
         set((state) => {
           state.isLoading = true;
         });
 
         try {
-          // Try to fetch current user - backend will check HttpOnly cookies
-          await get().fetchCurrentUser();
-        } catch (error) {
-          // Try to refresh session
-          try {
-            await get().refreshSession();
-            await get().fetchCurrentUser();
-          } catch (refreshError) {
-            get().resetAuth();
+          // Check for existing Supabase session
+          const { data: { session } } = await supabase.auth.getSession();
+
+          if (session) {
+            // Convert Supabase user to app user format
+            const appUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
+              avatar: session.user.user_metadata?.avatar_url,
+              role: (session.user.user_metadata?.role as UserRole) || 'viewer',
+              permissions: session.user.user_metadata?.permissions || [],
+              preferences: session.user.user_metadata?.preferences || {},
+              createdAt: session.user.created_at,
+              updatedAt: session.user.updated_at || session.user.created_at
+            };
+
+            set((state) => {
+              state.user = appUser;
+              state.supabaseUser = session.user;
+              state.session = session;
+              state.isAuthenticated = true;
+              state.tokenExpiry = session.expires_at ? session.expires_at * 1000 : null;
+              state.isLoading = false;
+              state.error = null;
+            });
+          } else {
+            set((state) => {
+              state.isLoading = false;
+              state.isAuthenticated = false;
+            });
           }
+        } catch (error) {
+          console.error('Auth initialization error:', error);
+          get().resetAuth();
         }
+
+        // Setup auth state change listener
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN' && session) {
+            const appUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
+              avatar: session.user.user_metadata?.avatar_url,
+              role: (session.user.user_metadata?.role as UserRole) || 'viewer',
+              permissions: session.user.user_metadata?.permissions || [],
+              preferences: session.user.user_metadata?.preferences || {},
+              createdAt: session.user.created_at,
+              updatedAt: session.user.updated_at || session.user.created_at
+            };
+
+            set((state) => {
+              state.user = appUser;
+              state.supabaseUser = session.user;
+              state.session = session;
+              state.isAuthenticated = true;
+              state.tokenExpiry = session.expires_at ? session.expires_at * 1000 : null;
+            });
+          } else if (event === 'SIGNED_OUT') {
+            get().resetAuth();
+          } else if (event === 'TOKEN_REFRESHED' && session) {
+            set((state) => {
+              state.session = session;
+              state.tokenExpiry = session.expires_at ? session.expires_at * 1000 : null;
+            });
+          }
+        });
       },
 
       resetAuth: () => {
@@ -290,6 +402,8 @@ export const useAuthStore = create<AuthStore>()(
 
         set((state) => {
           state.user = null;
+          state.supabaseUser = null;
+          state.session = null;
           state.isAuthenticated = false;
           state.tokenExpiry = null;
           state.isLoading = false;
@@ -303,7 +417,8 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        tokenExpiry: state.tokenExpiry
+        tokenExpiry: state.tokenExpiry,
+        session: state.session
       })
     }
   )

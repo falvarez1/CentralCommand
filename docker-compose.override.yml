@@ -25,6 +25,14 @@ services:
   supabase-db:
     ports:
       - "54322:5432"
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - log_min_messages=fatal
+      - -c
+      - custom.postgres_password=${POSTGRES_PASSWORD}
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_HOST: /var/run/postgresql

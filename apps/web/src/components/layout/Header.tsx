@@ -3,6 +3,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import {
   Search,
   Bell,
@@ -40,6 +43,8 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) => {
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
   const [searchValue, setSearchValue] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.GRID);
   const [notificationCount, setNotificationCount] = useState(3);
@@ -66,6 +71,33 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+    } catch (error) {
+      toast.error('Failed to log out');
+    }
+  };
+
+  const handleProfile = () => {
+    navigate('/profile');
+  };
+
+  const handleSettings = () => {
+    navigate('/settings');
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    if (user.name) {
+      const parts = user.name.split(' ');
+      return parts.map(p => p[0]).join('').toUpperCase().slice(0, 2);
+    }
+    return user.email ? user.email[0].toUpperCase() : 'U';
   };
 
   return (
@@ -208,42 +240,70 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
           </DropdownMenu>
 
           {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 hover:bg-accent">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-                <span className="hidden md:block text-sm font-medium">John Doe</span>
-                <ChevronDown className="hidden md:block h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="flex flex-col">
-                  <span>John Doe</span>
-                  <span className="text-xs text-muted-foreground font-normal">
-                    john.doe@company.com
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 hover:bg-accent">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.avatar} alt={user?.name || 'User'} />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  </Avatar>
+                  <span className="hidden md:block text-sm font-medium">
+                    {user?.name || user?.email?.split('@')[0] || 'User'}
                   </span>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <ChevronDown className="hidden md:block h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span>{user?.name || 'User'}</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {user?.email}
+                    </span>
+                    {user?.role && (
+                      <Badge variant="outline" className="mt-1 text-xs w-fit">
+                        {user.role}
+                      </Badge>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleProfile}>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSettings}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/auth/login')}
+              >
+                Sign In
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate('/auth/register')}
+              >
+                Sign Up
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -11,9 +11,8 @@ import { PortalDetailsPage } from '@/pages/PortalDetailsPage'
 import { IncidentsPage } from '@/pages/IncidentsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
-import { LoginPage } from '@/pages/auth/LoginPage'
-import { RegisterPage } from '@/pages/auth/RegisterPage'
-import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import LoginPage from '@/pages/auth/login'
+import RegisterPage from '@/pages/auth/register'
 import { useSignalR } from '@/hooks/useSignalR'
 import { usePortalStore } from '@/stores/usePortalStore'
 import { useIncidentStore } from '@/stores/useIncidentStore'
@@ -72,7 +71,6 @@ function App() {
                     {/* Public Auth Routes */}
                     <Route path="/auth/login" element={<LoginPage />} />
                     <Route path="/auth/register" element={<RegisterPage />} />
-                    <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
 
                     {/* Protected Routes */}
                     <Route
