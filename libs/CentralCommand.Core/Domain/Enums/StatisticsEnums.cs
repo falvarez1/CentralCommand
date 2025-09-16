@@ -12,7 +12,15 @@ public enum TimeRange
     /// <summary>Last 7 days</summary>
     SevenDays,
     /// <summary>Last 30 days</summary>
-    ThirtyDays
+    ThirtyDays,
+    /// <summary>Last one hour (alias)</summary>
+    Hour = OneHour,
+    /// <summary>Last 24 hours (alias)</summary>
+    Day = TwentyFourHours,
+    /// <summary>Last 7 days (alias)</summary>
+    Week = SevenDays,
+    /// <summary>Last 30 days (alias)</summary>
+    Month = ThirtyDays
 }
 
 /// <summary>

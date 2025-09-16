@@ -62,8 +62,8 @@ public class GetStatisticsQueryHandler : IRequestHandler<GetStatisticsQuery, Sta
             {
                 Id = i.Id,
                 Title = i.Title,
-                Status = i.Status.ToString(),
-                Priority = i.Priority.ToString(),
+                Status = i.Status,
+                Severity = i.Severity,
                 CreatedAt = i.CreatedAt
             })
             .ToList();

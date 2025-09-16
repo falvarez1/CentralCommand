@@ -103,4 +103,9 @@ public interface IIncidentService
     /// Sends incident notifications
     /// </summary>
     Task SendNotificationsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets incident count by priority
+    /// </summary>
+    Task<Dictionary<string, int>> GetIncidentCountByPriorityAsync(CancellationToken cancellationToken = default);
 }

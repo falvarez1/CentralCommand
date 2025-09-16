@@ -21,9 +21,11 @@ public class CreateIncidentCommandValidator : AbstractValidator<CreateIncidentCo
         RuleFor(x => x.Type)
             .IsInEnum().WithMessage("Invalid incident type");
 
-        RuleFor(x => x.ReportedBy)
-            .NotEmpty().WithMessage("Reporter is required")
-            .MaximumLength(200).WithMessage("Reporter name must not exceed 200 characters");
+        When(x => x.ReportedBy.HasValue, () =>
+        {
+            RuleFor(x => x.ReportedBy)
+                .NotEmpty().WithMessage("Reporter is required");
+        });
 
         RuleFor(x => x.AssignedTo)
             .MaximumLength(200).WithMessage("Assigned to must not exceed 200 characters");

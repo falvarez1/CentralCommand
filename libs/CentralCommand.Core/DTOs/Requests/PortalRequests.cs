@@ -285,6 +285,44 @@ public class PortalQueryRequest
     /// </summary>
     [Range(1, 100)]
     public int PageSize { get; set; } = 20;
+
+    /// <summary>
+    /// Gets or sets whether to include metrics in the response
+    /// </summary>
+    public bool IncludeMetrics { get; set; }
+
+    /// <summary>
+    /// Gets the search term (alias for Search)
+    /// </summary>
+    public string? SearchTerm => Search;
+
+    /// <summary>
+    /// Gets the page (alias for PageNumber)
+    /// </summary>
+    public int Page => PageNumber;
+
+    /// <summary>
+    /// Gets a cache key for this query
+    /// </summary>
+    public string GetCacheKey()
+    {
+        var key = $"portals:{PageNumber}:{PageSize}";
+        if (!string.IsNullOrWhiteSpace(Search))
+            key += $":s:{Search}";
+        if (Category.HasValue)
+            key += $":c:{Category}";
+        if (Status.HasValue)
+            key += $":st:{Status}";
+        if (Environment.HasValue)
+            key += $":e:{Environment}";
+        if (Priority.HasValue)
+            key += $":p:{Priority}";
+        if (IsFavorite.HasValue)
+            key += $":f:{IsFavorite}";
+        if (!string.IsNullOrWhiteSpace(SortBy))
+            key += $":sb:{SortBy}:{SortDescending}";
+        return key;
+    }
 }
 
 /// <summary>

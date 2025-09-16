@@ -88,16 +88,23 @@ public class GetSparklineDataQueryHandler : IRequestHandler<GetSparklineDataQuer
             }
         }
 
+        // For now, return response time data as the primary metric
+        var dataPoints = new List<MetricDataPoint>();
+        for (int i = 0; i < timestamps.Count; i++)
+        {
+            dataPoints.Add(new MetricDataPoint
+            {
+                Timestamp = timestamps[i],
+                Value = responseTimeData[i]
+            });
+        }
+
         var response = new SparklineDataResponse
         {
-            ResponseTime = responseTimeData,
-            Uptime = uptimeData,
-            ErrorRate = errorRateData,
-            Requests = requestsData,
-            Timestamps = timestamps,
-            StartTime = startTime,
-            EndTime = now,
-            DataPoints = request.DataPoints
+            MetricName = request.MetricType ?? "ResponseTime",
+            DataPoints = dataPoints,
+            CurrentValue = responseTimeData.LastOrDefault(),
+            PreviousValue = responseTimeData.Count > 1 ? responseTimeData[responseTimeData.Count - 2] : 0
         };
 
         _logger.LogDebug("Sparkline data retrieved successfully");

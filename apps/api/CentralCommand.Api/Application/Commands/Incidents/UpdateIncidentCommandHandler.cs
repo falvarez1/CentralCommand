@@ -125,6 +125,6 @@ public class UpdateIncidentCommandHandler : IRequestHandler<UpdateIncidentComman
 
         _logger.LogInformation("Incident updated successfully: {Id}", incident.Id);
 
-        return incident.ToResponse();
+        return incident.ToResponse()!; // Incident is guaranteed to be non-null here
     }
 }

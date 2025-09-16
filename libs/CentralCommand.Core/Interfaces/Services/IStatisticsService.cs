@@ -62,6 +62,11 @@ public interface IStatisticsService
     /// Exports statistics to CSV
     /// </summary>
     Task<byte[]> ExportStatisticsAsync(TimeRange timeRange = TimeRange.SevenDays, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets dashboard statistics
+    /// </summary>
+    Task<DashboardSnapshot> GetDashboardStatisticsAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -98,4 +103,9 @@ public class DashboardSnapshot
     /// Gets or sets the health score
     /// </summary>
     public double HealthScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the snapshot was generated
+    /// </summary>
+    public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
 }

@@ -72,6 +72,6 @@ public class CreateIncidentCommandHandler : IRequestHandler<CreateIncidentComman
 
         _logger.LogInformation("Incident created successfully: {Id}", incident.Id);
 
-        return incident.ToResponse();
+        return incident.ToResponse()!; // Incident is guaranteed to be non-null here
     }
 }

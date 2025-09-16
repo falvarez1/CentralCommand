@@ -248,9 +248,9 @@ public class PortalsController : ControllerBase
                        (!to.HasValue || h.Timestamp <= to.Value))
             .OrderByDescending(h => h.Timestamp)
             .Take(limit)
-            .ToList() ?? new List<MetricsHistoryResponse>();
+            .ToList() ?? new List<MetricsDataPoint>();
 
-        return Ok(new ApiResponse<List<MetricsHistoryResponse>>
+        return Ok(new ApiResponse<List<MetricsDataPoint>>
         {
             Success = true,
             Data = history
@@ -312,27 +312,27 @@ public class PortalsController : ControllerBase
         {
             try
             {
-                switch (request.Operation.ToLower())
+                switch (request.Operation)
                 {
-                    case "delete":
+                    case CentralCommand.Core.DTOs.Requests.BatchOperationType.Delete:
                         var deleteResult = await _mediator.Send(new DeletePortalCommand(portalId), cancellationToken);
                         results.Add(new BatchOperationItemResult
                         {
                             PortalId = portalId,
                             Success = deleteResult,
-                            Message = deleteResult ? "Deleted successfully" : "Portal not found"
+                            Error = deleteResult ? null : "Portal not found"
                         });
                         break;
 
-                    case "updatestatus":
-                        if (request.Data != null && request.Data.TryGetValue("status", out var statusValue))
+                    case CentralCommand.Core.DTOs.Requests.BatchOperationType.Update:
+                        if (request.UpdateData != null)
                         {
                             // In a real implementation, you would have an UpdatePortalStatusCommand
                             results.Add(new BatchOperationItemResult
                             {
                                 PortalId = portalId,
                                 Success = true,
-                                Message = "Status updated"
+                                Error = null
                             });
                         }
                         break;
@@ -342,7 +342,7 @@ public class PortalsController : ControllerBase
                         {
                             PortalId = portalId,
                             Success = false,
-                            Message = $"Unknown operation: {request.Operation}"
+                            Error = $"Unknown operation: {request.Operation}"
                         });
                         break;
                 }
@@ -354,15 +354,13 @@ public class PortalsController : ControllerBase
                 {
                     PortalId = portalId,
                     Success = false,
-                    Message = ex.Message
+                    Error = ex.Message
                 });
             }
         }
 
         var response = new BatchOperationResponse
         {
-            Operation = request.Operation,
-            TotalCount = request.PortalIds.Count,
             SuccessCount = results.Count(r => r.Success),
             FailureCount = results.Count(r => !r.Success),
             Results = results

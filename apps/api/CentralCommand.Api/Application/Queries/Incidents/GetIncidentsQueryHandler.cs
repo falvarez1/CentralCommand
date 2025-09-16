@@ -35,7 +35,7 @@ public class GetIncidentsQueryHandler : IRequestHandler<GetIncidentsQuery, Paged
             filteredIncidents = filteredIncidents.Where(i =>
                 i.Title.ToLower().Contains(searchLower) ||
                 i.Description.ToLower().Contains(searchLower) ||
-                i.Tags.Any(t => t.ToLower().Contains(searchLower)));
+                (i.Tags != null && i.Tags.ToLower().Contains(searchLower)));
         }
 
         if (request.Status.HasValue)
@@ -55,7 +55,8 @@ public class GetIncidentsQueryHandler : IRequestHandler<GetIncidentsQuery, Paged
 
         if (request.PortalId.HasValue)
         {
-            filteredIncidents = filteredIncidents.Where(i => i.AffectedPortalIds.Contains(request.PortalId.Value));
+            var portalIdStr = request.PortalId.Value.ToString();
+            filteredIncidents = filteredIncidents.Where(i => i.AffectedPortalIds != null && i.AffectedPortalIds.Contains(portalIdStr));
         }
 
         if (!string.IsNullOrWhiteSpace(request.AssignedTo))
@@ -89,8 +90,8 @@ public class GetIncidentsQueryHandler : IRequestHandler<GetIncidentsQuery, Paged
                 ? filteredIncidents.OrderByDescending(i => i.Type)
                 : filteredIncidents.OrderBy(i => i.Type),
             "updatedat" => request.SortDescending
-                ? filteredIncidents.OrderByDescending(i => i.UpdatedAt ?? i.CreatedAt)
-                : filteredIncidents.OrderBy(i => i.UpdatedAt ?? i.CreatedAt),
+                ? filteredIncidents.OrderByDescending(i => i.UpdatedAt)
+                : filteredIncidents.OrderBy(i => i.UpdatedAt),
             _ => request.SortDescending
                 ? filteredIncidents.OrderByDescending(i => i.CreatedAt)
                 : filteredIncidents.OrderBy(i => i.CreatedAt)
@@ -104,15 +105,14 @@ public class GetIncidentsQueryHandler : IRequestHandler<GetIncidentsQuery, Paged
             .Take(request.PageSize)
             .ToList();
 
-        var incidentResponses = pagedIncidents.Select(i => i.ToResponse()).ToList();
+        var incidentResponses = pagedIncidents.Select(i => i.ToResponse()!).ToList();
 
         return new PagedResult<IncidentResponse>
         {
             Items = incidentResponses,
             PageNumber = request.PageNumber,
             PageSize = request.PageSize,
-            TotalItems = totalItems,
-            TotalPages = (int)Math.Ceiling(totalItems / (double)request.PageSize)
+            TotalCount = totalItems
         };
     }
 }

@@ -150,7 +150,7 @@ public class NotificationService : INotificationService
             IncidentId = incident.Id,
             Title = incident.Title,
             Description = incident.Description,
-            AffectedPortals = incident.AffectedPortalIds.Count,
+            AffectedPortals = incident.GetAffectedPortalIds().Count,
             Timestamp = DateTime.UtcNow
         };
 
@@ -388,5 +388,13 @@ public class NotificationService : INotificationService
         };
 
         return await SendMultiChannelAsync(notification, cancellationToken);
+    }
+
+    public async Task BroadcastStatisticsUpdateAsync(object statistics, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Broadcasting statistics update");
+
+        // In a real implementation, this would broadcast via SignalR, WebSockets, or other real-time mechanism
+        await Task.CompletedTask;
     }
 }

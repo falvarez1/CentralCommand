@@ -1,16 +1,19 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
+using CentralCommand.Core.Domain.ValueObjects;
 using CentralCommand.Core.DTOs.Common;
 using CentralCommand.Core.DTOs.Requests;
 using CentralCommand.Core.DTOs.Responses;
 using CentralCommand.Core.Interfaces.Services;
+using CentralCommand.Core.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace CentralCommand.Api.Services;
 
 public partial class IncidentService : IIncidentService
 {
-    private readonly IIncidentRepository _repository;
+    private readonly IIncidentRepository _repository = null!;
 
     // Implement missing IIncidentService methods
 
@@ -50,10 +53,10 @@ public partial class IncidentService : IIncidentService
             Severity = request.Severity,
             Status = request.Status,
             Priority = MapSeverityToPriority(request.Severity),
-            AffectedPortalIds = request.AffectedPortals?.Select(p => Guid.Parse(p)).ToList() ?? new List<Guid>(),
-            AffectedServices = request.AffectedServices ?? new List<string>(),
+            AffectedPortalIds = request.AffectedPortals != null ? JsonSerializer.Serialize(request.AffectedPortals.Select(p => Guid.Parse(p)).ToList()) : null,
+            AffectedServices = request.AffectedServices != null ? JsonSerializer.Serialize(request.AffectedServices) : null,
             ImpactedUsers = request.ImpactedUsers ?? 0,
-            ReportedBy = userId.ToString(),
+            ReportedBy = userId,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = userId
         };
@@ -100,9 +103,23 @@ public partial class IncidentService : IIncidentService
         var incident = await _repository.GetByIdAsync(id, cancellationToken);
         if (incident == null) return null;
 
-        incident.Status = IncidentStatus.Acknowledged;
+        incident.Status = IncidentStatus.InProgress; // Changed from Acknowledged
         incident.AcknowledgedAt = DateTime.UtcNow;
-        incident.AcknowledgedBy = userId;
+        // Store acknowledgment info in timeline
+        var timeline = string.IsNullOrEmpty(incident.Timeline)
+            ? new List<TimelineEntry>()
+            : JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? new List<TimelineEntry>();
+
+        timeline.Add(new TimelineEntry
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Action = "Incident acknowledged",
+            User = userId.ToString(),
+            Description = request.Notes ?? "Incident has been acknowledged"
+        });
+
+        incident.Timeline = JsonSerializer.Serialize(timeline);
         incident.UpdatedAt = DateTime.UtcNow;
         incident.UpdatedBy = userId;
 
@@ -120,7 +137,21 @@ public partial class IncidentService : IIncidentService
         incident.RootCause = request.RootCause;
         incident.PostmortemUrl = request.PostmortemUrl;
         incident.ResolvedAt = DateTime.UtcNow;
-        incident.ResolvedBy = userId;
+        // Store resolved info in timeline
+        var timeline = string.IsNullOrEmpty(incident.Timeline)
+            ? new List<TimelineEntry>()
+            : JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? new List<TimelineEntry>();
+
+        timeline.Add(new TimelineEntry
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Action = "Incident resolved",
+            User = userId.ToString(),
+            Description = request.Resolution
+        });
+
+        incident.Timeline = JsonSerializer.Serialize(timeline);
         incident.UpdatedAt = DateTime.UtcNow;
         incident.UpdatedBy = userId;
 
@@ -134,7 +165,21 @@ public partial class IncidentService : IIncidentService
         if (incident == null) return null;
 
         incident.Status = IncidentStatus.Closed;
-        incident.ClosedAt = DateTime.UtcNow;
+        // Store closed info in timeline
+        var timeline = string.IsNullOrEmpty(incident.Timeline)
+            ? new List<TimelineEntry>()
+            : JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? new List<TimelineEntry>();
+
+        timeline.Add(new TimelineEntry
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Action = "Incident closed",
+            User = userId.ToString(),
+            Description = "Incident has been closed"
+        });
+
+        incident.Timeline = JsonSerializer.Serialize(timeline);
         incident.UpdatedAt = DateTime.UtcNow;
         incident.UpdatedBy = userId;
 
@@ -152,7 +197,7 @@ public partial class IncidentService : IIncidentService
         {
             Id = Guid.NewGuid(),
             Content = request.Text,
-            Author = userId.ToString(),
+            Author = userId,
             IsInternal = request.IsInternal,
             CreatedAt = DateTime.UtcNow
         };
@@ -179,7 +224,7 @@ public partial class IncidentService : IIncidentService
         {
             Id = c.Id,
             Text = c.Content,
-            AuthorId = Guid.Parse(c.Author),
+            AuthorId = c.Author,
             CreatedAt = c.CreatedAt,
             IsInternal = c.IsInternal
         });
@@ -205,11 +250,11 @@ public partial class IncidentService : IIncidentService
 
         return new IncidentStatsResponse
         {
-            TotalIncidents = incidentList.Count,
-            OpenIncidents = incidentList.Count(i => i.Status == IncidentStatus.Open),
+            Total = incidentList.Count,
+            Open = incidentList.Count(i => i.Status == IncidentStatus.Open),
             AcknowledgedIncidents = incidentList.Count(i => i.Status == IncidentStatus.Acknowledged),
-            ResolvedIncidents = incidentList.Count(i => i.Status == IncidentStatus.Resolved),
-            ClosedIncidents = incidentList.Count(i => i.Status == IncidentStatus.Closed),
+            Resolved = incidentList.Count(i => i.Status == IncidentStatus.Resolved),
+            Closed = incidentList.Count(i => i.Status == IncidentStatus.Closed),
             CriticalIncidents = incidentList.Count(i => i.Severity == IncidentSeverity.Critical),
             HighIncidents = incidentList.Count(i => i.Severity == IncidentSeverity.High),
             MediumIncidents = incidentList.Count(i => i.Severity == IncidentSeverity.Medium),
@@ -219,7 +264,7 @@ public partial class IncidentService : IIncidentService
 
     public async Task<IEnumerable<IncidentSummaryResponse>> GetByPortalAsync(Guid portalId, CancellationToken cancellationToken = default)
     {
-        var incidents = await _repository.FindAsync(i => i.AffectedPortalIds.Contains(portalId), cancellationToken);
+        var incidents = await _repository.FindAsync(i => i.AffectedPortalIds != null && i.AffectedPortalIds.Contains(portalId.ToString()), cancellationToken);
         return incidents.Select(MapToSummaryResponse);
     }
 
@@ -234,7 +279,17 @@ public partial class IncidentService : IIncidentService
     public async Task<IEnumerable<TimelineEntry>> GetTimelineAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var incident = await _repository.GetByIdAsync(id, cancellationToken);
-        return incident?.Timeline ?? Enumerable.Empty<TimelineEntry>();
+        if (incident == null || string.IsNullOrEmpty(incident.Timeline))
+            return Enumerable.Empty<TimelineEntry>();
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? Enumerable.Empty<TimelineEntry>();
+        }
+        catch
+        {
+            return Enumerable.Empty<TimelineEntry>();
+        }
     }
 
     public async Task<IncidentResponse?> EscalateAsync(Guid id, IncidentSeverity newSeverity, string reason, Guid userId, CancellationToken cancellationToken = default)
@@ -248,14 +303,20 @@ public partial class IncidentService : IIncidentService
         incident.UpdatedBy = userId;
 
         // Add timeline entry
-        incident.Timeline.Add(new TimelineEntry
+        var timeline = string.IsNullOrEmpty(incident.Timeline)
+            ? new List<TimelineEntry>()
+            : JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? new List<TimelineEntry>();
+
+        timeline.Add(new TimelineEntry
         {
             Id = Guid.NewGuid(),
             Timestamp = DateTime.UtcNow,
             Action = "Escalated",
             User = userId.ToString(),
-            Details = $"Severity changed to {newSeverity}: {reason}"
+            Description = $"Severity changed to {newSeverity}: {reason}"
         });
+
+        incident.Timeline = JsonSerializer.Serialize(timeline);
 
         await _repository.UpdateAsync(incident, cancellationToken);
         return MapToResponse(incident);
@@ -268,8 +329,25 @@ public partial class IncidentService : IIncidentService
 
         if (parent == null || child == null) return false;
 
-        parent.RelatedIncidentIds.Add(childId.ToString());
-        child.RelatedIncidentIds.Add(parentId.ToString());
+        // Update parent's related incidents
+        var parentRelated = string.IsNullOrEmpty(parent.RelatedIncidents)
+            ? new List<string>()
+            : JsonSerializer.Deserialize<List<string>>(parent.RelatedIncidents) ?? new List<string>();
+        if (!parentRelated.Contains(childId.ToString()))
+        {
+            parentRelated.Add(childId.ToString());
+            parent.RelatedIncidents = JsonSerializer.Serialize(parentRelated);
+        }
+
+        // Update child's related incidents
+        var childRelated = string.IsNullOrEmpty(child.RelatedIncidents)
+            ? new List<string>()
+            : JsonSerializer.Deserialize<List<string>>(child.RelatedIncidents) ?? new List<string>();
+        if (!childRelated.Contains(parentId.ToString()))
+        {
+            childRelated.Add(parentId.ToString());
+            child.RelatedIncidents = JsonSerializer.Serialize(childRelated);
+        }
 
         await _repository.UpdateAsync(parent, cancellationToken);
         await _repository.UpdateAsync(child, cancellationToken);
@@ -341,8 +419,8 @@ Root Cause:
             Severity = incident.Severity,
             Status = incident.Status,
             Priority = incident.Priority,
-            AffectedPortals = incident.AffectedPortalIds.Select(id => id.ToString()).ToList(),
-            AffectedServices = incident.AffectedServices,
+            AffectedPortals = incident.GetAffectedPortals(),
+            AffectedServices = incident.GetAffectedServices(),
             ImpactedUsers = incident.ImpactedUsers,
             CreatedAt = incident.CreatedAt,
             UpdatedAt = incident.UpdatedAt,
@@ -356,7 +434,7 @@ Root Cause:
             {
                 Id = c.Id,
                 Text = c.Content,
-                AuthorId = Guid.Parse(c.Author),
+                AuthorId = c.Author,
                 CreatedAt = c.CreatedAt,
                 IsInternal = c.IsInternal
             }).ToList()
@@ -372,9 +450,24 @@ Root Cause:
             Type = incident.Type,
             Severity = incident.Severity,
             Status = incident.Status,
-            Priority = incident.Priority,
-            CreatedAt = incident.CreatedAt,
-            UpdatedAt = incident.UpdatedAt
+            AffectedPortalCount = incident.GetAffectedPortals().Count,
+            ImpactedUsers = incident.ImpactedUsers,
+            Assignee = incident.Assignee,
+            CreatedAt = incident.CreatedAt
+        };
+    }
+
+    public async Task<Dictionary<string, int>> GetIncidentCountByPriorityAsync(CancellationToken cancellationToken = default)
+    {
+        var incidents = await _repository.GetAllAsync(cancellationToken);
+        var incidentList = incidents.ToList();
+
+        return new Dictionary<string, int>
+        {
+            ["Critical"] = incidentList.Count(i => i.Priority == IncidentPriority.Critical),
+            ["High"] = incidentList.Count(i => i.Priority == IncidentPriority.High),
+            ["Medium"] = incidentList.Count(i => i.Priority == IncidentPriority.Medium),
+            ["Low"] = incidentList.Count(i => i.Priority == IncidentPriority.Low)
         };
     }
 }

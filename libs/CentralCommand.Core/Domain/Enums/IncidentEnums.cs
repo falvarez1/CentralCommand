@@ -60,6 +60,8 @@ public enum IncidentStatus
 {
     /// <summary>Incident is open</summary>
     Open,
+    /// <summary>Incident has been acknowledged</summary>
+    Acknowledged,
     /// <summary>Incident is being worked on</summary>
     InProgress,
     /// <summary>Incident has been resolved</summary>

@@ -49,6 +49,6 @@ public class CreatePortalCommandHandler : IRequestHandler<CreatePortalCommand, P
 
         _logger.LogInformation("Portal created successfully: {Id}", portal.Id);
 
-        return portal.ToResponse();
+        return portal.ToResponse()!; // Portal is guaranteed to be non-null here
     }
 }

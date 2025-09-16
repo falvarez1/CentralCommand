@@ -1,8 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using CentralCommand.Api.Models.DTOs;
+using CentralCommand.Core.DTOs.Common;
+using CentralCommand.Core.DTOs.Requests;
+using CentralCommand.Core.DTOs.Responses;
+using CentralCommand.Core.Domain.Enums;
+using CentralCommand.Core.Interfaces.Services;
 using CentralCommand.Api.Services;
+using CentralCommand.Api.Infrastructure.Exceptions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -19,14 +24,14 @@ public static class PortalEndpoints
         group.MapGet("/", GetPortals)
             .WithName("GetPortals")
             .WithSummary("Get all portals with pagination and filtering")
-            .Produces<PagedResponse<PortalDto>>(StatusCodes.Status200OK)
+            .Produces<PagedResponse<PortalResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // GET /api/v1/portals/{id}
         group.MapGet("/{id:guid}", GetPortalById)
             .WithName("GetPortalById")
             .WithSummary("Get a specific portal by ID")
-            .Produces<PortalDto>(StatusCodes.Status200OK)
+            .Produces<PortalResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         // POST /api/v1/portals
@@ -34,7 +39,7 @@ public static class PortalEndpoints
             .WithName("CreatePortal")
             .WithSummary("Create a new portal")
             .RequireAuthorization("PortalWrite")
-            .Produces<PortalDto>(StatusCodes.Status201Created)
+            .Produces<PortalResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status409Conflict);
 
@@ -43,7 +48,7 @@ public static class PortalEndpoints
             .WithName("UpdatePortal")
             .WithSummary("Update an existing portal")
             .RequireAuthorization("PortalWrite")
-            .Produces<PortalDto>(StatusCodes.Status200OK)
+            .Produces<PortalResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
@@ -60,14 +65,14 @@ public static class PortalEndpoints
         group.MapGet("/{id:guid}/metrics", GetPortalMetrics)
             .WithName("GetPortalMetrics")
             .WithSummary("Get current metrics for a portal")
-            .Produces<PortalMetricsDto>(StatusCodes.Status200OK)
+            .Produces<PortalMetricsResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         // GET /api/v1/portals/{id}/metrics/history
         group.MapGet("/{id:guid}/metrics/history", GetPortalMetricsHistory)
             .WithName("GetPortalMetricsHistory")
             .WithSummary("Get historical metrics for a portal")
-            .Produces<PortalMetricsHistoryDto>(StatusCodes.Status200OK)
+            .Produces<PortalMetricsHistoryResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -83,25 +88,25 @@ public static class PortalEndpoints
         group.MapGet("/search", SearchPortals)
             .WithName("SearchPortals")
             .WithSummary("Search portals by name or URL")
-            .Produces<List<PortalDto>>(StatusCodes.Status200OK);
+            .Produces<List<PortalResponse>>(StatusCodes.Status200OK);
 
         // POST /api/v1/portals/bulk-metrics
         group.MapPost("/bulk-metrics", GetBulkMetrics)
             .WithName("GetBulkMetrics")
             .WithSummary("Get metrics for multiple portals")
-            .Produces<Dictionary<Guid, PortalMetricsDto>>(StatusCodes.Status200OK);
+            .Produces<Dictionary<Guid, PortalMetricsResponse>>(StatusCodes.Status200OK);
 
         return group;
     }
 
-    private static async Task<Results<Ok<PagedResponse<PortalDto>>, BadRequest<ProblemDetailsResponse>>> GetPortals(
-        [AsParameters] PortalQuery query,
+    private static async Task<Results<Ok<PagedResult<PortalSummaryResponse>>, BadRequest<ProblemDetails>>> GetPortals(
+        [AsParameters] PortalQueryRequest query,
         IPortalService portalService,
         CancellationToken cancellationToken)
     {
         if (query.PageSize > 100)
         {
-            return TypedResults.BadRequest(new ProblemDetailsResponse
+            return TypedResults.BadRequest(new ProblemDetails
             {
                 Type = "https://centralcommand.com/errors/validation",
                 Title = "Invalid page size",
@@ -114,19 +119,19 @@ public static class PortalEndpoints
         return TypedResults.Ok(result);
     }
 
-    private static async Task<Results<Ok<PortalDto>, NotFound>> GetPortalById(
+    private static async Task<Results<Ok<PortalResponse>, NotFound>> GetPortalById(
         Guid id,
         IPortalService portalService,
         CancellationToken cancellationToken)
     {
-        var portal = await portalService.GetPortalByIdAsync(id, cancellationToken);
+        var portal = await portalService.GetByIdAsync(id, cancellationToken);
 
         return portal != null
             ? TypedResults.Ok(portal)
             : TypedResults.NotFound();
     }
 
-    private static async Task<Results<Created<PortalDto>, ValidationProblem, Conflict<ProblemDetailsResponse>>> CreatePortal(
+    private static async Task<Results<Created<PortalResponse>, ValidationProblem, Conflict<ProblemDetails>>> CreatePortal(
         [FromBody] CreatePortalRequest request,
         IPortalService portalService,
         HttpContext httpContext,
@@ -134,14 +139,16 @@ public static class PortalEndpoints
     {
         try
         {
-            var portal = await portalService.CreatePortalAsync(request, cancellationToken);
+            // TODO: Get userId from context
+            var userId = Guid.NewGuid();
+            var portal = await portalService.CreateAsync(request, userId, cancellationToken);
 
             var location = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}/api/v1/portals/{portal.Id}";
             return TypedResults.Created(location, portal);
         }
         catch (BusinessRuleException ex)
         {
-            return TypedResults.Conflict(new ProblemDetailsResponse
+            return TypedResults.Conflict(new ProblemDetails
             {
                 Type = "https://centralcommand.com/errors/business-rule",
                 Title = "Business rule violation",
@@ -151,7 +158,7 @@ public static class PortalEndpoints
         }
     }
 
-    private static async Task<Results<Ok<PortalDto>, NotFound, Conflict<ProblemDetailsResponse>, ValidationProblem>> UpdatePortal(
+    private static async Task<Results<Ok<PortalResponse>, NotFound, Conflict<ProblemDetails>, ValidationProblem>> UpdatePortal(
         Guid id,
         [FromBody] UpdatePortalRequest request,
         IPortalService portalService,
@@ -159,7 +166,9 @@ public static class PortalEndpoints
     {
         try
         {
-            var portal = await portalService.UpdatePortalAsync(id, request, cancellationToken);
+            // TODO: Get userId from context
+            var userId = Guid.NewGuid();
+            var portal = await portalService.UpdateAsync(id, request, userId, cancellationToken);
             return TypedResults.Ok(portal);
         }
         catch (NotFoundException)
@@ -168,7 +177,7 @@ public static class PortalEndpoints
         }
         catch (ConcurrencyException ex)
         {
-            return TypedResults.Conflict(new ProblemDetailsResponse
+            return TypedResults.Conflict(new ProblemDetails
             {
                 Type = "https://centralcommand.com/errors/concurrency",
                 Title = "Concurrency conflict",
@@ -178,7 +187,7 @@ public static class PortalEndpoints
         }
         catch (BusinessRuleException ex)
         {
-            return TypedResults.Conflict(new ProblemDetailsResponse
+            return TypedResults.Conflict(new ProblemDetails
             {
                 Type = "https://centralcommand.com/errors/business-rule",
                 Title = "Business rule violation",
@@ -195,7 +204,9 @@ public static class PortalEndpoints
     {
         try
         {
-            await portalService.DeletePortalAsync(id, cancellationToken);
+            // TODO: Get userId from context
+            var userId = Guid.NewGuid();
+            await portalService.DeleteAsync(id, userId, cancellationToken);
             return TypedResults.NoContent();
         }
         catch (NotFoundException)
@@ -204,7 +215,7 @@ public static class PortalEndpoints
         }
     }
 
-    private static async Task<Results<Ok<PortalMetricsDto>, NotFound>> GetPortalMetrics(
+    private static async Task<Results<Ok<PortalMetricsResponse>, NotFound>> GetPortalMetrics(
         Guid id,
         [FromQuery] bool includeHistory,
         IPortalService portalService,
@@ -217,18 +228,18 @@ public static class PortalEndpoints
             : TypedResults.NotFound();
     }
 
-    private static async Task<Results<Ok<PortalMetricsHistoryDto>, BadRequest<ProblemDetailsResponse>, NotFound>> GetPortalMetricsHistory(
+    private static async Task<Results<Ok<PortalMetricsHistoryResponse>, BadRequest<ProblemDetails>, NotFound>> GetPortalMetricsHistory(
         Guid id,
         [FromQuery] DateTime from,
         [FromQuery] DateTime to,
         [FromQuery] MetricInterval interval,
-        [FromQuery] List<string>? metrics,
+        [FromQuery] string[]? metrics,
         IPortalService portalService,
         CancellationToken cancellationToken)
     {
         if (from >= to)
         {
-            return TypedResults.BadRequest(new ProblemDetailsResponse
+            return TypedResults.BadRequest(new ProblemDetails
             {
                 Type = "https://centralcommand.com/errors/validation",
                 Title = "Invalid date range",
@@ -239,7 +250,7 @@ public static class PortalEndpoints
 
         if ((to - from).TotalDays > 90)
         {
-            return TypedResults.BadRequest(new ProblemDetailsResponse
+            return TypedResults.BadRequest(new ProblemDetails
             {
                 Type = "https://centralcommand.com/errors/validation",
                 Title = "Date range too large",
@@ -250,8 +261,8 @@ public static class PortalEndpoints
 
         try
         {
-            var history = await portalService.GetPortalMetricsHistoryAsync(
-                id, from, to, interval, metrics, cancellationToken);
+            var days = (int)(to - from).TotalDays;
+            var history = await portalService.GetPortalMetricsHistoryAsync(id, days, cancellationToken);
 
             return TypedResults.Ok(history);
         }
@@ -282,7 +293,7 @@ public static class PortalEndpoints
         }
     }
 
-    private static async Task<Ok<List<PortalDto>>> SearchPortals(
+    private static async Task<Ok<IEnumerable<PortalSummaryResponse>>> SearchPortals(
         [FromQuery] string q,
         [FromQuery] int limit,
         IPortalService portalService,
@@ -293,7 +304,7 @@ public static class PortalEndpoints
         return TypedResults.Ok(results);
     }
 
-    private static async Task<Ok<Dictionary<Guid, PortalMetricsDto>>> GetBulkMetrics(
+    private static async Task<Ok<Dictionary<Guid, PortalMetricsResponse>>> GetBulkMetrics(
         [FromBody] List<Guid> portalIds,
         IPortalService portalService,
         CancellationToken cancellationToken)
@@ -303,18 +314,5 @@ public static class PortalEndpoints
     }
 }
 
-// Custom exception types
-public class NotFoundException : Exception
-{
-    public NotFoundException(string message) : base(message) { }
-}
-
-public class BusinessRuleException : Exception
-{
-    public BusinessRuleException(string message) : base(message) { }
-}
-
-public class ConcurrencyException : Exception
-{
-    public ConcurrencyException(string message) : base(message) { }
-}
+// Moved exception types to Infrastructure.Exceptions namespace
+// Types used: NotFoundException, BusinessRuleException, ConcurrencyException

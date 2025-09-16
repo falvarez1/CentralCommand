@@ -39,4 +39,14 @@ public interface ICacheService
     /// Refreshes the expiration time of a cached item
     /// </summary>
     Task RefreshAsync(string key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Invalidates all cache entries with a given prefix
+    /// </summary>
+    Task InvalidatePrefixAsync(string prefix, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Invalidates (removes) a cache entry
+    /// </summary>
+    Task InvalidateAsync(string key, CancellationToken cancellationToken = default);
 }

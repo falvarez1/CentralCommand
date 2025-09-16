@@ -37,11 +37,10 @@ public class UpdatePortalCommandValidator : AbstractValidator<UpdatePortalComman
                 .MaximumLength(100).WithMessage("Icon must not exceed 100 characters");
         });
 
-        When(x => x.Category != null, () =>
+        When(x => x.Category.HasValue, () =>
         {
             RuleFor(x => x.Category)
-                .NotEmpty().WithMessage("Category cannot be empty")
-                .MaximumLength(100).WithMessage("Category must not exceed 100 characters");
+                .IsInEnum().WithMessage("Invalid category value");
         });
 
         When(x => x.Environment.HasValue, () =>
@@ -56,16 +55,16 @@ public class UpdatePortalCommandValidator : AbstractValidator<UpdatePortalComman
                 .IsInEnum().WithMessage("Invalid priority value");
         });
 
-        When(x => x.Owner != null, () =>
+        When(x => x.Owner.HasValue, () =>
         {
             RuleFor(x => x.Owner)
-                .MaximumLength(200).WithMessage("Owner must not exceed 200 characters");
+                .NotEmpty().WithMessage("Owner ID cannot be empty");
         });
 
-        When(x => x.Team != null, () =>
+        When(x => x.Team.HasValue, () =>
         {
             RuleFor(x => x.Team)
-                .MaximumLength(200).WithMessage("Team must not exceed 200 characters");
+                .NotEmpty().WithMessage("Team ID cannot be empty");
         });
 
         When(x => x.Tags != null, () =>

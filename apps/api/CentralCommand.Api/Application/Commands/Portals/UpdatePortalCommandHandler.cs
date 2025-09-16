@@ -70,6 +70,6 @@ public class UpdatePortalCommandHandler : IRequestHandler<UpdatePortalCommand, P
 
         _logger.LogInformation("Portal updated successfully: {Id}", portal.Id);
 
-        return portal.ToResponse();
+        return portal.ToResponse()!; // Portal is guaranteed to be non-null here
     }
 }

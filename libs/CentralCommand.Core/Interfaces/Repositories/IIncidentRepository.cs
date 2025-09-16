@@ -1,5 +1,6 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
+using CentralCommand.Core.Domain.ValueObjects;
 
 namespace CentralCommand.Core.Interfaces.Repositories;
 
@@ -92,4 +93,24 @@ public interface IIncidentRepository : IRepository<Incident>
     /// Gets incidents by date range (alias for GetByDateRangeAsync)
     /// </summary>
     Task<IEnumerable<Incident>> GetIncidentsByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets active incidents (Open or InProgress)
+    /// </summary>
+    Task<IEnumerable<Incident>> GetActiveIncidentsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets incidents by portal ID
+    /// </summary>
+    Task<IEnumerable<Incident>> GetIncidentsByPortalAsync(Guid portalId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds a comment to an incident
+    /// </summary>
+    Task AddCommentAsync(Guid incidentId, Comment comment, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds a timeline entry to an incident
+    /// </summary>
+    Task AddTimelineEntryAsync(Guid incidentId, TimelineEntry entry, CancellationToken cancellationToken = default);
 }

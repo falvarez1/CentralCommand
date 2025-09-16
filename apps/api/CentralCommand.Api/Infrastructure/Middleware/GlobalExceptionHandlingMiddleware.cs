@@ -57,11 +57,16 @@ public class GlobalExceptionHandlingMiddleware
                 response.Errors = new Dictionary<string, string[]> { ["Unauthorized"] = new[] { unauthorizedEx.Message } };
                 break;
 
-            case ArgumentException argEx:
             case ArgumentNullException argNullEx:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.Message = "Required argument is null";
+                response.Errors = new Dictionary<string, string[]> { ["BadRequest"] = new[] { argNullEx.Message } };
+                break;
+
+            case ArgumentException argEx:
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 response.Message = "Invalid request";
-                response.Errors = new Dictionary<string, string[]> { ["BadRequest"] = new[] { exception.Message } };
+                response.Errors = new Dictionary<string, string[]> { ["BadRequest"] = new[] { argEx.Message } };
                 break;
 
             case InvalidOperationException invalidOpEx:

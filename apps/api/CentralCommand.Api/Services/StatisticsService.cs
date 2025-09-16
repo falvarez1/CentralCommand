@@ -116,26 +116,22 @@ public class StatisticsService : IStatisticsService
         };
     }
 
-    public async Task<List<(string Category, int Count)>> GetPortalCategoryDistributionAsync(CancellationToken cancellationToken = default)
+    public async Task<Dictionary<PortalCategory, int>> GetPortalCategoryDistributionAsync(CancellationToken cancellationToken = default)
     {
         var portals = await _unitOfWork.Portals.GetAllAsync(cancellationToken);
 
         return portals
             .GroupBy(p => p.Category)
-            .Select(g => (Category: g.Key, Count: g.Count()))
-            .OrderByDescending(x => x.Count)
-            .ToList();
+            .ToDictionary(g => g.Key, g => g.Count());
     }
 
-    public async Task<List<(PortalEnvironment Environment, int Count)>> GetPortalEnvironmentDistributionAsync(CancellationToken cancellationToken = default)
+    public async Task<Dictionary<PortalEnvironment, int>> GetPortalEnvironmentDistributionAsync(CancellationToken cancellationToken = default)
     {
         var portals = await _unitOfWork.Portals.GetAllAsync(cancellationToken);
 
         return portals
             .GroupBy(p => p.Environment)
-            .Select(g => (Environment: g.Key, Count: g.Count()))
-            .OrderBy(x => x.Environment)
-            .ToList();
+            .ToDictionary(g => g.Key, g => g.Count());
     }
 
     // Additional IStatisticsService interface methods
@@ -164,14 +160,14 @@ public class StatisticsService : IStatisticsService
         var portals = await _unitOfWork.Portals.GetAllAsync(cancellationToken);
         var portalsList = portals.ToList();
 
+        var statusDistribution = await GetPortalStatusDistributionAsync(cancellationToken);
+
         return new PortalStatsResponse
         {
-            TotalCount = portalsList.Count,
-            ByStatus = await GetPortalStatusDistributionAsync(cancellationToken),
-            ByCategory = (await GetPortalCategoryDistributionAsync(cancellationToken))
-                .ToDictionary(x => x.Category, x => x.Count),
-            ByEnvironment = (await GetPortalEnvironmentDistributionAsync(cancellationToken))
-                .ToDictionary(x => x.Environment, x => x.Count),
+            Total = portalsList.Count,
+            ByStatus = statusDistribution.ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value),
+            ByCategory = await GetPortalCategoryDistributionAsync(cancellationToken),
+            ByEnvironment = await GetPortalEnvironmentDistributionAsync(cancellationToken),
             AverageMetrics = await GetPortalMetricsAveragesAsync(cancellationToken)
         };
     }
@@ -183,11 +179,11 @@ public class StatisticsService : IStatisticsService
 
         return new IncidentStatsResponse
         {
-            TotalIncidents = incidentsList.Count,
-            OpenIncidents = incidentsList.Count(i => i.Status == IncidentStatus.Open),
+            Total = incidentsList.Count,
+            Open = incidentsList.Count(i => i.Status == IncidentStatus.Open),
             AcknowledgedIncidents = incidentsList.Count(i => i.Status == IncidentStatus.Acknowledged),
-            ResolvedIncidents = incidentsList.Count(i => i.Status == IncidentStatus.Resolved),
-            ClosedIncidents = incidentsList.Count(i => i.Status == IncidentStatus.Closed),
+            Resolved = incidentsList.Count(i => i.Status == IncidentStatus.Resolved),
+            Closed = incidentsList.Count(i => i.Status == IncidentStatus.Closed),
             CriticalIncidents = incidentsList.Count(i => i.Severity == IncidentSeverity.Critical),
             HighIncidents = incidentsList.Count(i => i.Severity == IncidentSeverity.High),
             MediumIncidents = incidentsList.Count(i => i.Severity == IncidentSeverity.Medium),
@@ -322,17 +318,22 @@ public class StatisticsService : IStatisticsService
 
         // Generate CSV export
         var csv = "Metric,Value\n";
-        csv += $"Total Portals,{snapshot.PortalStatistics.TotalCount}\n";
-        csv += $"Healthy Portals,{snapshot.SystemStatistics.HealthyPortals}\n";
-        csv += $"Degraded Portals,{snapshot.SystemStatistics.DegradedPortals}\n";
-        csv += $"Down Portals,{snapshot.SystemStatistics.DownPortals}\n";
-        csv += $"Active Incidents,{snapshot.SystemStatistics.ActiveIncidents}\n";
-        csv += $"Critical Incidents,{snapshot.SystemStatistics.CriticalIncidents}\n";
+        csv += $"Total Portals,{snapshot.PortalStats.TotalCount}\n";
+        csv += $"Healthy Portals,{snapshot.SystemStats.HealthyPortals}\n";
+        csv += $"Degraded Portals,{snapshot.SystemStats.DegradedPortals}\n";
+        csv += $"Down Portals,{snapshot.SystemStats.DownPortals}\n";
+        csv += $"Active Incidents,{snapshot.SystemStats.ActiveIncidents}\n";
+        csv += $"Critical Incidents,{snapshot.SystemStats.CriticalIncidents}\n";
         csv += $"Health Score,{snapshot.HealthScore}\n";
-        csv += $"Average Response Time,{snapshot.PerformanceMetrics.AverageResponseTime}\n";
+        csv += $"Average Response Time,{snapshot.SystemStats.AverageResponseTime}\n";
         csv += $"Generated At,{snapshot.GeneratedAt}\n";
 
         return System.Text.Encoding.UTF8.GetBytes(csv);
+    }
+
+    public async Task<DashboardSnapshot> GetDashboardStatisticsAsync(CancellationToken cancellationToken = default)
+    {
+        return await GetDashboardSnapshotAsync(cancellationToken);
     }
 
     private double CalculatePercentile(List<double> values, double percentile)

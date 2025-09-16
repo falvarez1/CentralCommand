@@ -115,6 +115,11 @@ public class Incident : BaseEntity, IAggregateRoot
     public DateTime? AcknowledgedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets when the incident was closed
+    /// </summary>
+    public DateTime? ClosedAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the root cause analysis
     /// </summary>
     [StringLength(5000)]

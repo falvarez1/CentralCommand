@@ -5,9 +5,12 @@ using CentralCommand.Api.Extensions;
 using CentralCommand.Api.Hubs;
 using CentralCommand.Api.Infrastructure.BackgroundServices;
 using CentralCommand.Api.Infrastructure.Caching;
+using CentralCommand.Api.Infrastructure.Data;
 using CentralCommand.Api.Infrastructure.Middleware;
+using CentralCommand.Api.Infrastructure.Services;
 using CentralCommand.Api.Repositories;
 using CentralCommand.Api.Services;
+using CentralCommand.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -27,8 +30,6 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.WithMachineName()
-    .Enrich.WithEnvironmentName()
     .WriteTo.Console()
     .WriteTo.File("logs/centralcommand-.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -140,7 +141,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // Configure Entity Framework
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -240,16 +241,16 @@ builder.Services.AddSignalR(options =>
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>("database");
+    .AddDbContextCheck<ApplicationDbContext>("database");
     // TODO: Add Redis health check when Redis package is installed
     // .AddRedis(builder.Configuration.GetConnectionString("Redis") ?? string.Empty, name: "redis");
 
 // Register application services
-builder.Services.AddScoped<IPortalService, PortalService>();
-builder.Services.AddScoped<IIncidentService, IncidentService>();
-builder.Services.AddScoped<IStatisticsService, StatisticsService>();
-builder.Services.AddScoped<ICommandService, CommandService>();
-builder.Services.AddScoped<IUserPreferencesService, UserPreferencesService>();
+builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.IPortalService, CentralCommand.Api.Services.PortalService>();
+builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.IIncidentService, CentralCommand.Api.Services.IncidentService>();
+builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.IStatisticsService, CentralCommand.Api.Services.StatisticsService>();
+builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.ICommandService, CentralCommand.Api.Services.CommandService>();
+builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.IUserPreferencesService, CentralCommand.Api.Services.UserPreferencesService>();
 
 // Register infrastructure services
 builder.Services.AddScoped<IPortalRepository, PortalRepository>();
@@ -308,7 +309,7 @@ else
 }
 
 // Global error handler
-app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 // Request logging
 app.UseSerilogRequestLogging(options =>
@@ -381,7 +382,7 @@ app.MapHub<MetricsHub>("/hubs/metrics");
 // Ensure database is created and migrations are applied
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     if (app.Environment.IsDevelopment())
     {
         await dbContext.Database.EnsureCreatedAsync();

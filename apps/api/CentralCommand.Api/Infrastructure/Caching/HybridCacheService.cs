@@ -196,4 +196,21 @@ public class HybridCacheService : ICacheService
 
         _logger.LogWarning("ClearAsync is not fully implemented");
     }
+
+    public async Task InvalidatePrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        // For memory cache, you'd typically need to track keys with the prefix
+        // For distributed cache (Redis), you'd use pattern matching
+        // This is a simplified implementation
+
+        await RemoveByPatternAsync($"{prefix}*", cancellationToken);
+        _logger.LogDebug("Invalidated cache entries with prefix: {Prefix}", prefix);
+    }
+
+    public async Task InvalidateAsync(string key, CancellationToken cancellationToken = default)
+    {
+        // InvalidateAsync is an alias for RemoveAsync
+        await RemoveAsync(key, cancellationToken);
+        _logger.LogDebug("Invalidated cache entry for key: {Key}", key);
+    }
 }

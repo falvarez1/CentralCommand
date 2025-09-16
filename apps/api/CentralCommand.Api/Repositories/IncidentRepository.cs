@@ -1,5 +1,7 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
+using CentralCommand.Core.Domain.ValueObjects;
+using CentralCommand.Core.Interfaces.Repositories;
 using CentralCommand.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
@@ -16,7 +18,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Status != IncidentStatus.Resolved && i.Status != IncidentStatus.Closed)
             .OrderByDescending(i => i.Priority)
             .ThenByDescending(i => i.CreatedAt)
@@ -25,10 +26,10 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
 
     public async Task<IEnumerable<Incident>> GetIncidentsByPortalAsync(Guid portalId, CancellationToken cancellationToken = default)
     {
+        var portalIdStr = $"\"{portalId}\"";
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
-            .Where(i => i.AffectedPortalIds.Contains(portalId))
+            .Where(i => i.AffectedPortalIds != null && i.AffectedPortalIds.Contains(portalIdStr))
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -40,7 +41,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.CreatedAt >= startDate && i.CreatedAt <= endDate)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -52,7 +52,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Status == status)
             .OrderByDescending(i => i.Priority)
             .ThenByDescending(i => i.CreatedAt)
@@ -65,7 +64,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Priority == priority)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -114,7 +112,9 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
         var incident = await GetByIdAsync(incidentId, cancellationToken);
         if (incident != null)
         {
-            incident.Timeline.Add(entry);
+            var timeline = incident.GetTimeline();
+            timeline.Add(entry);
+            incident.Timeline = System.Text.Json.JsonSerializer.Serialize(timeline);
             await UpdateAsync(incident, cancellationToken);
         }
     }
@@ -123,7 +123,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -132,7 +131,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
     }
 
@@ -141,7 +139,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Severity == severity)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -151,7 +148,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Type == type)
             .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -161,7 +157,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.AssignedTo == assigneeId.ToString())
             .OrderByDescending(i => i.Priority)
             .ThenByDescending(i => i.CreatedAt)
@@ -172,8 +167,7 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
-            .Where(i => i.TeamId == teamId)
+            .Where(i => i.Team == teamId)
             .OrderByDescending(i => i.Priority)
             .ThenByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -197,7 +191,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Status == IncidentStatus.Open)
             .OrderByDescending(i => i.Priority)
             .ThenByDescending(i => i.CreatedAt)
@@ -272,7 +265,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Status == IncidentStatus.Resolved)
             .OrderByDescending(i => i.ResolvedAt)
             .Take(count)
@@ -283,7 +275,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     {
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Priority == IncidentPriority.Critical || i.Severity == IncidentSeverity.Critical)
             .Where(i => i.Status != IncidentStatus.Resolved && i.Status != IncidentStatus.Closed)
             .OrderByDescending(i => i.CreatedAt)
@@ -295,7 +286,6 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
         searchTerm = searchTerm.ToLower();
         return await _dbSet
             .Include(i => i.Comments)
-            .Include(i => i.Timeline)
             .Where(i => i.Title.ToLower().Contains(searchTerm) ||
                        i.Description.ToLower().Contains(searchTerm) ||
                        i.Id.ToString().Contains(searchTerm))
@@ -306,7 +296,8 @@ public class IncidentRepository : Repository<Incident>, IIncidentRepository
     public async Task<bool> HasActiveIncidentsForPortalAsync(Guid portalId, CancellationToken cancellationToken = default)
     {
         return await _dbSet
-            .AnyAsync(i => i.AffectedPortalIds.Contains(portalId) &&
+            .AnyAsync(i => i.AffectedPortalIds != null &&
+                          i.AffectedPortalIds.Contains(portalId.ToString()) &&
                           i.Status != IncidentStatus.Resolved &&
                           i.Status != IncidentStatus.Closed,
                      cancellationToken);

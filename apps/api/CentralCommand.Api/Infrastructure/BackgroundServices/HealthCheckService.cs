@@ -61,10 +61,10 @@ public class HealthCheckService : BackgroundService
             await portalService.RunHealthChecksAsync(cancellationToken);
 
             // Run system health checks using the built-in health check service
-            var healthService = scope.ServiceProvider.GetService<HealthCheckService>();
-            if (healthService != null)
+            var msHealthCheckService = scope.ServiceProvider.GetService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
+            if (msHealthCheckService != null)
             {
-                var systemHealthResult = await healthService.CheckHealthAsync(cancellationToken);
+                var systemHealthResult = await msHealthCheckService.CheckHealthAsync(cancellationToken);
 
                 if (systemHealthResult.Status != HealthStatus.Healthy)
                 {

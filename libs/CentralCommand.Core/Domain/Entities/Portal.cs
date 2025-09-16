@@ -96,6 +96,17 @@ public class Portal : BaseEntity, IAggregateRoot
     public DateTime? LastIncident { get; set; }
 
     /// <summary>
+    /// Gets or sets when the status last changed
+    /// </summary>
+    public DateTime? LastStatusChange { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason for the current status
+    /// </summary>
+    [StringLength(500)]
+    public string? StatusReason { get; set; }
+
+    /// <summary>
     /// Gets or sets the portal configuration
     /// </summary>
     public PortalConfig Config { get; set; } = PortalConfig.Default;

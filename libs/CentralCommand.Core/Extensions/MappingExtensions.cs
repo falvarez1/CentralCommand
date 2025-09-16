@@ -49,6 +49,27 @@ public static class MappingExtensions
         };
     }
 
+    public static PortalSummaryResponse? ToSummaryResponse(this Portal? portal)
+    {
+        if (portal == null) return null;
+
+        return new PortalSummaryResponse
+        {
+            Id = portal.Id,
+            Name = portal.Name,
+            Url = portal.Url,
+            Category = portal.Category,
+            Status = portal.Status,
+            Environment = portal.Environment,
+            Priority = portal.Priority,
+            Icon = portal.Icon,
+            Color = portal.Color,
+            LastChecked = portal.LastChecked,
+            Uptime = portal.Metrics?.Uptime ?? 100,
+            ResponseTime = portal.Metrics?.ResponseTime ?? 0
+        };
+    }
+
     // Removed ToResponse for PortalMetrics as PortalResponse expects PortalMetrics directly, not PortalMetricsResponse
 
     // Removed ToResponse for PortalConfig as PortalResponse expects PortalConfig directly, not PortalConfigResponse
@@ -441,6 +462,43 @@ public static class MappingExtensions
             Success = result.Success,
             Error = result.Success ? null : result.Message
         };
+    }
+
+    #endregion
+
+    #region Query Extensions
+
+    public static string GetCacheKey(this PortalQueryRequest query)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrEmpty(query.Search))
+            parts.Add($"s:{query.Search}");
+        if (query.Category.HasValue)
+            parts.Add($"c:{query.Category}");
+        if (query.Status.HasValue)
+            parts.Add($"st:{query.Status}");
+        if (query.Environment.HasValue)
+            parts.Add($"e:{query.Environment}");
+        if (query.Priority.HasValue)
+            parts.Add($"p:{query.Priority}");
+        if (query.IsFavorite.HasValue)
+            parts.Add($"f:{query.IsFavorite}");
+        if (query.IsPublic.HasValue)
+            parts.Add($"pub:{query.IsPublic}");
+        if (query.Team.HasValue)
+            parts.Add($"t:{query.Team}");
+        if (query.Owner.HasValue)
+            parts.Add($"o:{query.Owner}");
+        if (query.Tags != null && query.Tags.Any())
+            parts.Add($"tg:{string.Join(",", query.Tags)}");
+
+        parts.Add($"sb:{query.SortBy}");
+        parts.Add($"sd:{query.SortDescending}");
+        parts.Add($"pn:{query.PageNumber}");
+        parts.Add($"ps:{query.PageSize}");
+
+        return string.Join(":", parts);
     }
 
     #endregion

@@ -336,6 +336,11 @@ public class IncidentQueryRequest
 public class AcknowledgeIncidentRequest
 {
     /// <summary>
+    /// Gets or sets the acknowledgement notes
+    /// </summary>
+    public string? Notes { get; set; }
+
+    /// <summary>
     /// Gets or sets the ETag for optimistic concurrency
     /// </summary>
     public string? ETag { get; set; }

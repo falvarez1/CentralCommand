@@ -178,4 +178,16 @@ public class MemoryCacheService : ICacheService
             _semaphore.Release();
         }
     }
+
+    public async Task InvalidatePrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        await RemoveByPatternAsync(prefix, cancellationToken);
+        _logger.LogDebug("Invalidated cache entries with prefix: {Prefix}", prefix);
+    }
+
+    public async Task InvalidateAsync(string key, CancellationToken cancellationToken = default)
+    {
+        await RemoveAsync(key, cancellationToken);
+        _logger.LogDebug("Invalidated cache entry for key: {Key}", key);
+    }
 }

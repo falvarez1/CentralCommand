@@ -106,7 +106,7 @@ public class IncidentsController : ControllerBase
             Description = request.Description,
             Priority = request.Priority ?? IncidentPriority.Medium,
             Type = request.Type,
-            ReportedBy = request.ReportedBy?.ToString() ?? string.Empty,
+            ReportedBy = request.ReportedBy,
             AssignedTo = request.AssignedTo,
             AffectedPortalIds = request.AffectedPortalIds ?? new List<Guid>(),
             Tags = request.Tags ?? new List<string>()
@@ -254,16 +254,16 @@ public class IncidentsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddIncidentComment(
         Guid id,
-        [FromBody] AddCommentRequest request,
+        [FromBody] AddIncidentCommentRequest request,
         CancellationToken cancellationToken = default)
     {
         var command = new AddIncidentCommentCommand
         {
             IncidentId = id,
-            Content = request.Content,
-            Author = request.Author,
+            Content = request.Text,
+            Author = request.Text ?? string.Empty, // Use text as a temporary author
             IsInternal = request.IsInternal,
-            Attachments = request.Attachments
+            Attachments = request.Attachments ?? new List<string>()
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -299,19 +299,19 @@ public class IncidentsController : ControllerBase
             });
         }
 
+        var timeline = incident.Timeline ?? new List<Core.Domain.ValueObjects.TimelineEntry>();
+
         return Ok(new ApiResponse<List<TimelineEntryResponse>>
         {
             Success = true,
-            Data = incident.Timeline.Select(t => new TimelineEntryResponse
+            Data = timeline.Select(t => new TimelineEntryResponse
             {
                 Id = t.Id,
                 IncidentId = incident.Id,
                 Timestamp = t.Timestamp,
-                Action = t.Action,
+                EventType = t.Type,
                 Description = t.Description,
-                PerformedBy = t.PerformedBy,
-                Author = t.Author,
-                Type = t.Type,
+                UserId = t.PerformedBy != Guid.Empty ? t.PerformedBy : null,
                 Metadata = t.Metadata
             }).ToList()
         });

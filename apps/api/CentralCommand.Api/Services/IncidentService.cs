@@ -1,13 +1,15 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
+using CentralCommand.Core.Domain.ValueObjects;
 using CentralCommand.Core.Interfaces.Services;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace CentralCommand.Api.Services;
 
 public partial class IncidentService : IIncidentService
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork = null!;
     private readonly INotificationService _notificationService;
     private readonly ILogger<IncidentService> _logger;
 
@@ -26,7 +28,7 @@ public partial class IncidentService : IIncidentService
         string description,
         IncidentPriority priority,
         IncidentType type,
-        string reportedBy,
+        Guid? reportedBy,
         List<Guid> affectedPortalIds,
         CancellationToken cancellationToken = default)
     {
@@ -39,20 +41,19 @@ public partial class IncidentService : IIncidentService
             Priority = priority,
             Type = type,
             ReportedBy = reportedBy,
-            AffectedPortalIds = affectedPortalIds,
+            AffectedPortalIds = affectedPortalIds != null ? System.Text.Json.JsonSerializer.Serialize(affectedPortalIds) : null,
             CreatedAt = DateTime.UtcNow,
-            Comments = new List<Comment>(),
-            Timeline = new List<TimelineEntry>
+            Timeline = System.Text.Json.JsonSerializer.Serialize(new List<TimelineEntry>
             {
                 new TimelineEntry
                 {
                     Id = Guid.NewGuid(),
                     Timestamp = DateTime.UtcNow,
                     Action = "Incident created",
-                    User = reportedBy,
+                    User = reportedBy?.ToString() ?? "System",
                     Description = $"Incident '{title}' was created"
                 }
-            }
+            })
         };
 
         await _unitOfWork.Incidents.AddAsync(incident, cancellationToken);
@@ -94,14 +95,20 @@ public partial class IncidentService : IIncidentService
         }
 
         // Add timeline entry
-        incident.Timeline.Add(new TimelineEntry
+        var timeline = string.IsNullOrEmpty(incident.Timeline)
+            ? new List<TimelineEntry>()
+            : JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? new List<TimelineEntry>();
+
+        timeline.Add(new TimelineEntry
         {
             Id = Guid.NewGuid(),
             Timestamp = DateTime.UtcNow,
             Action = $"Status changed from {oldStatus} to {newStatus}",
-            User = updatedBy,
-            Description = resolution
+            User = updatedBy ?? "System",
+            Description = resolution ?? string.Empty
         });
+
+        incident.Timeline = JsonSerializer.Serialize(timeline);
 
         await _unitOfWork.Incidents.UpdateAsync(incident, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -133,7 +140,11 @@ public partial class IncidentService : IIncidentService
         incident.UpdatedAt = DateTime.UtcNow;
 
         // Add timeline entry
-        incident.Timeline.Add(new TimelineEntry
+        var timeline = string.IsNullOrEmpty(incident.Timeline)
+            ? new List<TimelineEntry>()
+            : JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? new List<TimelineEntry>();
+
+        timeline.Add(new TimelineEntry
         {
             Id = Guid.NewGuid(),
             Timestamp = DateTime.UtcNow,
@@ -141,6 +152,8 @@ public partial class IncidentService : IIncidentService
             User = assignedBy,
             Description = $"Assigned to {assignedTo}" + (previousAssignee != null ? $" (was: {previousAssignee})" : "")
         });
+
+        incident.Timeline = JsonSerializer.Serialize(timeline);
 
         await _unitOfWork.Incidents.UpdateAsync(incident, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -161,10 +174,10 @@ public partial class IncidentService : IIncidentService
         {
             Id = Guid.NewGuid(),
             Content = content,
-            Author = author,
+            AuthorName = author ?? "System",
+            Author = Guid.Empty, // In a real implementation, this would be the user's GUID
             CreatedAt = DateTime.UtcNow,
-            IsInternal = isInternal,
-            Attachments = new List<string>()
+            IsInternal = isInternal
         };
 
         await _unitOfWork.Incidents.AddCommentAsync(incidentId, comment, cancellationToken);
@@ -222,7 +235,11 @@ public partial class IncidentService : IIncidentService
             incident.UpdatedAt = DateTime.UtcNow;
 
             // Add timeline entry
-            incident.Timeline.Add(new TimelineEntry
+            var timeline = string.IsNullOrEmpty(incident.Timeline)
+                ? new List<TimelineEntry>()
+                : JsonSerializer.Deserialize<List<TimelineEntry>>(incident.Timeline) ?? new List<TimelineEntry>();
+
+            timeline.Add(new TimelineEntry
             {
                 Id = Guid.NewGuid(),
                 Timestamp = DateTime.UtcNow,
@@ -230,6 +247,8 @@ public partial class IncidentService : IIncidentService
                 User = escalatedBy,
                 Description = $"Priority increased from {oldPriority} to {incident.Priority}"
             });
+
+            incident.Timeline = JsonSerializer.Serialize(timeline);
 
             await _unitOfWork.Incidents.UpdateAsync(incident, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -83,4 +83,34 @@ public interface IPortalService
     /// Gets portals that need attention (down, degraded, high error rate)
     /// </summary>
     Task<IEnumerable<PortalSummaryResponse>> GetPortalsNeedingAttentionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets user-specific portals
+    /// </summary>
+    Task<IEnumerable<PortalSummaryResponse>> GetUserPortalsAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets portal metrics
+    /// </summary>
+    Task<PortalMetricsResponse> GetPortalMetricsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets portal metrics history
+    /// </summary>
+    Task<PortalMetricsHistoryResponse> GetPortalMetricsHistoryAsync(Guid id, int days = 7, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Refreshes portal metrics
+    /// </summary>
+    Task<PortalMetricsResponse> RefreshPortalMetricsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches portals
+    /// </summary>
+    Task<IEnumerable<PortalSummaryResponse>> SearchPortalsAsync(string query, int limit = 10, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets bulk portal metrics
+    /// </summary>
+    Task<Dictionary<Guid, PortalMetricsResponse>> GetBulkPortalMetricsAsync(List<Guid> portalIds, CancellationToken cancellationToken = default);
 }

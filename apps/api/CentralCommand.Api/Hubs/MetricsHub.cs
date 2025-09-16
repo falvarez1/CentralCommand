@@ -1,8 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using CentralCommand.Api.Models.DTOs;
+using CentralCommand.Core.DTOs.Common;
+using CentralCommand.Core.DTOs.Requests;
+using CentralCommand.Core.DTOs.Responses;
+using CentralCommand.Core.Domain.Enums;
+using CentralCommand.Core.Interfaces.Services;
 using CentralCommand.Api.Services;
+using CentralCommand.Api.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -33,7 +38,7 @@ public class MetricsHub : Hub<IMetricsHubClient>
 
         if (userId != null)
         {
-            await _connectionManager.AddConnectionAsync(userId, connectionId);
+            await _connectionManager.AddConnectionAsync(connectionId, userId);
             _logger.LogInformation("User {UserId} connected with connection {ConnectionId}", userId, connectionId);
 
             // Send initial state to the connected client
@@ -42,7 +47,7 @@ public class MetricsHub : Hub<IMetricsHubClient>
                 var portals = await _portalService.GetUserPortalsAsync(userId);
                 await Clients.Caller.InitialDataLoaded(new InitialDataPayload
                 {
-                    Portals = portals,
+                    Portals = portals.ToList(),
                     Timestamp = DateTime.UtcNow
                 });
             }
@@ -62,7 +67,7 @@ public class MetricsHub : Hub<IMetricsHubClient>
 
         if (userId != null)
         {
-            await _connectionManager.RemoveConnectionAsync(userId, connectionId);
+            await _connectionManager.RemoveConnectionAsync(connectionId);
             _logger.LogInformation("User {UserId} disconnected from connection {ConnectionId}", userId, connectionId);
         }
 
@@ -182,14 +187,14 @@ public interface IMetricsHubClient
 // SignalR message payloads
 public record InitialDataPayload
 {
-    public List<PortalDto> Portals { get; init; } = new();
+    public List<PortalSummaryResponse> Portals { get; init; } = new();
     public DateTime Timestamp { get; init; }
 }
 
 public record PortalMetricsUpdate
 {
     public Guid PortalId { get; init; }
-    public PortalMetricsDto? Metrics { get; init; }
+    public PortalMetricsResponse? Metrics { get; init; }
     public DateTime Timestamp { get; init; }
 }
 

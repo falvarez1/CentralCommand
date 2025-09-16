@@ -44,6 +44,21 @@ public interface INotificationService
     /// Sends a threshold breach alert
     /// </summary>
     Task<NotificationResult> SendThresholdBreachAlertAsync(string metricName, double value, double threshold, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends an incident notification
+    /// </summary>
+    Task SendIncidentNotificationAsync(Domain.Entities.Incident incident, string eventType, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a portal alert
+    /// </summary>
+    Task SendPortalAlertAsync(Domain.Entities.Portal portal, string alertType, string message, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Broadcasts statistics updates
+    /// </summary>
+    Task BroadcastStatisticsUpdateAsync(object statistics, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

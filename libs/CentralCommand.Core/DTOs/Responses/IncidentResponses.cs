@@ -89,6 +89,11 @@ public class IncidentResponse
     public DateTime? AcknowledgedAt { get; set; }
 
     /// <summary>
+    /// Gets or sets when the incident was closed
+    /// </summary>
+    public DateTime? ClosedAt { get; set; }
+
+    /// <summary>
     /// Gets or sets the root cause analysis
     /// </summary>
     public string? RootCause { get; set; }
@@ -331,6 +336,20 @@ public class CommentResponse
     /// Gets or sets the user who created the comment
     /// </summary>
     public Guid CreatedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the author ID (alias for CreatedBy)
+    /// </summary>
+    public Guid AuthorId
+    {
+        get => CreatedBy;
+        set => CreatedBy = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the author name
+    /// </summary>
+    public string AuthorName { get; set; } = string.Empty;
 }
 
 /// <summary>

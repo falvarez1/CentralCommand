@@ -89,4 +89,30 @@ public class MetricsHistory : BaseEntity
             Metrics = Metrics with { RequestsPerMinute = value };
         }
     }
+
+    /// <summary>
+    /// Gets or sets the CPU usage percentage
+    /// </summary>
+    public double Cpu
+    {
+        get => Metrics?.Cpu ?? 0;
+        set
+        {
+            if (Metrics == null) Metrics = PortalMetrics.Default;
+            Metrics = Metrics with { Cpu = value };
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the memory usage percentage
+    /// </summary>
+    public double Memory
+    {
+        get => Metrics?.Memory ?? 0;
+        set
+        {
+            if (Metrics == null) Metrics = PortalMetrics.Default;
+            Metrics = Metrics with { Memory = value };
+        }
+    }
 }

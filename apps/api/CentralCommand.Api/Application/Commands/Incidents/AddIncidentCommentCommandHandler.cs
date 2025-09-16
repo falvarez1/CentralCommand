@@ -55,6 +55,6 @@ public class AddIncidentCommentCommandHandler : IRequestHandler<AddIncidentComme
 
         _logger.LogInformation("Comment added successfully to incident: {IncidentId}", request.IncidentId);
 
-        return comment.ToResponse();
+        return comment.ToResponse()!; // Comment is guaranteed to be non-null here
     }
 }

@@ -23,8 +23,7 @@ public class CreatePortalCommandValidator : AbstractValidator<CreatePortalComman
             .MaximumLength(100).WithMessage("Icon must not exceed 100 characters");
 
         RuleFor(x => x.Category)
-            .NotEmpty().WithMessage("Category is required")
-            .MaximumLength(100).WithMessage("Category must not exceed 100 characters");
+            .IsInEnum().WithMessage("Invalid category value");
 
         RuleFor(x => x.Environment)
             .IsInEnum().WithMessage("Invalid environment value");
@@ -32,11 +31,17 @@ public class CreatePortalCommandValidator : AbstractValidator<CreatePortalComman
         RuleFor(x => x.Priority)
             .IsInEnum().WithMessage("Invalid priority value");
 
-        RuleFor(x => x.Owner)
-            .MaximumLength(200).WithMessage("Owner must not exceed 200 characters");
+        When(x => x.Owner.HasValue, () =>
+        {
+            RuleFor(x => x.Owner)
+                .NotEmpty().WithMessage("Owner ID cannot be empty");
+        });
 
-        RuleFor(x => x.Team)
-            .MaximumLength(200).WithMessage("Team must not exceed 200 characters");
+        When(x => x.Team.HasValue, () =>
+        {
+            RuleFor(x => x.Team)
+                .NotEmpty().WithMessage("Team ID cannot be empty");
+        });
 
         RuleFor(x => x.Tags)
             .Must(tags => tags == null || tags.Count <= 20)

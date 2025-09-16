@@ -89,7 +89,7 @@ public class MetricsCalculationService : IMetricsCalculationService
         trends["ResponseTimeTrend"] = CalculateTrend(sortedHistory.Select(h => h.ResponseTime).ToList());
         trends["UptimeTrend"] = CalculateTrend(sortedHistory.Select(h => h.Uptime).ToList());
         trends["ErrorRateTrend"] = CalculateTrend(sortedHistory.Select(h => h.ErrorRate).ToList());
-        trends["RequestsPerMinuteTrend"] = CalculateTrend(sortedHistory.Select(h => h.RequestsPerMinute).ToList());
+        trends["RequestsPerMinuteTrend"] = CalculateTrend(sortedHistory.Select(h => (double)h.RequestsPerMinute).ToList());
 
         return trends;
     }

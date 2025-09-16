@@ -42,6 +42,15 @@ public class PagedResult<T>
     public bool HasNextPage => PageNumber < TotalPages;
 
     /// <summary>
+    /// Gets or sets the page (alias for PageNumber)
+    /// </summary>
+    public int Page
+    {
+        get => PageNumber;
+        set => PageNumber = value;
+    }
+
+    /// <summary>
     /// Creates an empty paged result
     /// </summary>
     public static PagedResult<T> Empty(int pageNumber = 1, int pageSize = 10)

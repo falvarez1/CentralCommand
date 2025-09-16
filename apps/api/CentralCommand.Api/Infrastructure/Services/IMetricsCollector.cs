@@ -34,4 +34,9 @@ public interface IMetricsCollector
     /// Collects metrics for a portal
     /// </summary>
     Task<Core.Domain.ValueObjects.PortalMetrics> CollectMetricsAsync(Guid portalId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks the health of a portal
+    /// </summary>
+    Task<bool> CheckHealthAsync(string url, CancellationToken cancellationToken = default);
 }

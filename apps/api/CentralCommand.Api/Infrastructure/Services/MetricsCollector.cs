@@ -128,4 +128,19 @@ public class MetricsCollector : IMetricsCollector
             Timestamp = DateTime.UtcNow
         };
     }
+
+    public async Task<bool> CheckHealthAsync(string url, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            var response = await httpClient.GetAsync(url, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Health check failed for URL: {Url}", url);
+            return false;
+        }
+    }
 }

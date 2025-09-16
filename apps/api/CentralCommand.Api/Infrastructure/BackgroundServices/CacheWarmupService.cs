@@ -135,12 +135,21 @@ public class CacheWarmupService : BackgroundService
             var stats = await statisticsService.GetDashboardStatisticsAsync(cancellationToken);
             await cacheService.SetAsync("statistics:dashboard", stats, TimeSpan.FromMinutes(5), cancellationToken);
 
-            // Cache sparkline data for different periods
-            var periods = new[] { 1, 7, 30 };
-            foreach (var days in periods)
+            // Cache sparkline data for different metrics and periods
+            var metrics = new[] { "response_time", "uptime", "error_rate" };
+            var timeRanges = new[] {
+                CentralCommand.Core.Domain.Enums.TimeRange.TwentyFourHours,
+                CentralCommand.Core.Domain.Enums.TimeRange.SevenDays,
+                CentralCommand.Core.Domain.Enums.TimeRange.ThirtyDays
+            };
+
+            foreach (var metric in metrics)
             {
-                var sparklineData = await statisticsService.GetSparklineDataAsync(days, cancellationToken);
-                await cacheService.SetAsync($"statistics:sparkline:{days}d", sparklineData, TimeSpan.FromMinutes(15), cancellationToken);
+                foreach (var timeRange in timeRanges)
+                {
+                    var sparklineData = await statisticsService.GetSparklineDataAsync(metric, timeRange, cancellationToken);
+                    await cacheService.SetAsync($"statistics:sparkline:{metric}:{timeRange}", sparklineData, TimeSpan.FromMinutes(15), cancellationToken);
+                }
             }
 
             _logger.LogDebug("Warmed up statistics cache");
@@ -163,11 +172,14 @@ public class CacheWarmupService : BackgroundService
             await cacheService.SetAsync("incidents:active", activeIncidents, TimeSpan.FromMinutes(5), cancellationToken);
 
             // Cache incident statistics by priority
-            var priorities = new[] { "critical", "high", "medium", "low" };
-            foreach (var priority in priorities)
+            var priorityCounts = await incidentService.GetIncidentCountByPriorityAsync(cancellationToken);
+            await cacheService.SetAsync("incidents:count:priority", priorityCounts, TimeSpan.FromMinutes(10), cancellationToken);
+
+            // Also cache individual priority counts for quick access
+            foreach (var kvp in priorityCounts)
             {
-                var count = await incidentService.GetIncidentCountByPriorityAsync(priority, cancellationToken);
-                await cacheService.SetAsync($"incidents:count:priority:{priority}", count, TimeSpan.FromMinutes(10), cancellationToken);
+                // Cache value needs to be a reference type, so wrap it
+                await cacheService.SetAsync($"incidents:count:priority:{kvp.Key}", new { Count = kvp.Value }, TimeSpan.FromMinutes(10), cancellationToken);
             }
 
             _logger.LogDebug("Warmed up incident data cache");

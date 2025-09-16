@@ -1,5 +1,6 @@
 using CentralCommand.Api.Infrastructure.Services;
 using CentralCommand.Api.Services;
+using CentralCommand.Core.Interfaces.Services;
 
 namespace CentralCommand.Api.Infrastructure.BackgroundServices;
 

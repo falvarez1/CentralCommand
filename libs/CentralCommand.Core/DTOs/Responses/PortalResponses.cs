@@ -344,6 +344,31 @@ public class PortalHealthCheckResponse
     /// Gets or sets consecutive failure count
     /// </summary>
     public int ConsecutiveFailures { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the portal is healthy
+    /// </summary>
+    public bool IsHealthy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status string
+    /// </summary>
+    public string Status { get; set; } = "Unknown";
+
+    /// <summary>
+    /// Gets or sets the response time
+    /// </summary>
+    public double ResponseTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the uptime percentage
+    /// </summary>
+    public double Uptime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error rate percentage
+    /// </summary>
+    public double ErrorRate { get; set; }
 }
 
 /// <summary>
@@ -369,9 +394,19 @@ public class BatchOperationResult
     public int FailureCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the total count of operations
+    /// </summary>
+    public int TotalCount => SuccessCount + FailureCount;
+
+    /// <summary>
     /// Gets or sets the results for each portal
     /// </summary>
     public List<BatchOperationItemResult> Results { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the errors dictionary
+    /// </summary>
+    public Dictionary<string, string> Errors { get; set; } = new();
 }
 
 /// <summary>

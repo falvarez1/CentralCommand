@@ -86,6 +86,57 @@ public class StatisticsResponse
     /// Gets or sets the timestamp of the statistics
     /// </summary>
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the number of warning portals
+    /// </summary>
+    public int WarningPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the statistics were last updated
+    /// </summary>
+    public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets recent incidents
+    /// </summary>
+    public List<RecentIncidentInfo> RecentIncidents { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the portal status breakdown
+    /// </summary>
+    public Dictionary<string, int> PortalStatusBreakdown { get; set; } = new();
+}
+
+/// <summary>
+/// Recent incident information
+/// </summary>
+public class RecentIncidentInfo
+{
+    /// <summary>
+    /// Gets or sets the incident ID
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the incident title
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the incident severity
+    /// </summary>
+    public IncidentSeverity Severity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the incident status
+    /// </summary>
+    public IncidentStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the incident was created
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>
@@ -134,6 +185,41 @@ public class SystemStatsResponse
     /// Gets or sets the number of inactive portals
     /// </summary>
     public int InactivePortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of healthy portals
+    /// </summary>
+    public int HealthyPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of degraded portals
+    /// </summary>
+    public int DegradedPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of down portals
+    /// </summary>
+    public int DownPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of incidents
+    /// </summary>
+    public int TotalIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of critical incidents
+    /// </summary>
+    public int CriticalIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average uptime percentage
+    /// </summary>
+    public double AverageUptime { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the statistics were generated
+    /// </summary>
+    public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
 
     // Health statistics
     /// <summary>
@@ -306,6 +392,21 @@ public class PortalStatsResponse
     /// Gets or sets the average response time in milliseconds
     /// </summary>
     public double AverageResponseTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total count of portals (alias for Total)
+    /// </summary>
+    public int TotalCount => Total;
+
+    /// <summary>
+    /// Gets or sets portal counts by status
+    /// </summary>
+    public Dictionary<string, int> ByStatus { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets average metrics across all portals
+    /// </summary>
+    public Dictionary<string, double> AverageMetrics { get; set; } = new();
 }
 
 /// <summary>
@@ -318,10 +419,16 @@ public class IncidentStatsResponse
     /// </summary>
     public int Total { get; set; }
 
+    // Aliases for compatibility
+    public int TotalIncidents => Total;
+
     /// <summary>
     /// Gets or sets the number of open incidents
     /// </summary>
     public int Open { get; set; }
+
+    // Alias for compatibility
+    public int OpenIncidents => Open;
 
     /// <summary>
     /// Gets or sets the number of in-progress incidents
@@ -333,10 +440,41 @@ public class IncidentStatsResponse
     /// </summary>
     public int Resolved { get; set; }
 
+    // Alias for compatibility
+    public int ResolvedIncidents => Resolved;
+
     /// <summary>
     /// Gets or sets the number of closed incidents
     /// </summary>
     public int Closed { get; set; }
+
+    // Alias for compatibility
+    public int ClosedIncidents => Closed;
+
+    /// <summary>
+    /// Gets or sets the number of acknowledged incidents
+    /// </summary>
+    public int AcknowledgedIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of critical incidents
+    /// </summary>
+    public int CriticalIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of high priority incidents
+    /// </summary>
+    public int HighIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of medium priority incidents
+    /// </summary>
+    public int MediumIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of low priority incidents
+    /// </summary>
+    public int LowIncidents { get; set; }
 
     /// <summary>
     /// Gets or sets incident counts by severity
@@ -403,6 +541,31 @@ public class SparklineDataResponse
     /// Gets or sets the trend (up, down, stable)
     /// </summary>
     public string Trend { get; set; } = "stable";
+
+    /// <summary>
+    /// Gets or sets the data array (alternative to DataPoints)
+    /// </summary>
+    public List<double> Data { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the labels for data points
+    /// </summary>
+    public List<string> Labels { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the time range
+    /// </summary>
+    public TimeRange TimeRange { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the data was generated
+    /// </summary>
+    public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the values (alias for Data)
+    /// </summary>
+    public List<double> Values => Data;
 }
 
 /// <summary>

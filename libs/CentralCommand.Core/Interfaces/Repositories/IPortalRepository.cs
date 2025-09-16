@@ -1,5 +1,7 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
+using CentralCommand.Core.DTOs.Common;
+using CentralCommand.Core.DTOs.Requests;
 
 namespace CentralCommand.Core.Interfaces.Repositories;
 
@@ -77,4 +79,54 @@ public interface IPortalRepository : IRepository<Portal>
     /// Deletes a portal
     /// </summary>
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets portal with all details including metrics and health checks
+    /// </summary>
+    Task<Portal?> GetPortalWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets paginated list of portals with query filters
+    /// </summary>
+    Task<PagedResult<Portal>> GetPortalsAsync(PortalQueryRequest query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets portal metrics history
+    /// </summary>
+    Task<IEnumerable<MetricsHistory>> GetMetricsHistoryAsync(Guid portalId, DateTime from, DateTime to, Domain.Enums.MetricInterval interval, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves portal metrics
+    /// </summary>
+    Task SaveMetricsAsync(MetricsHistory metrics, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets user-specific portals
+    /// </summary>
+    Task<IEnumerable<Portal>> GetUserPortalsAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets favorite portals for a user
+    /// </summary>
+    Task<IEnumerable<Portal>> GetFavoritePortalsAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches portals with a limit
+    /// </summary>
+    Task<IEnumerable<Portal>> SearchAsync(string searchTerm, int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets portals by environment name
+    /// </summary>
+    Task<IEnumerable<Portal>> GetByEnvironmentAsync(string environment, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets portals by tags
+    /// </summary>
+    Task<IEnumerable<Portal>> GetByTagsAsync(List<string> tags, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a portal by URL
+    /// </summary>
+    Task<Portal?> GetByUrlAsync(string url, CancellationToken cancellationToken = default);
 }

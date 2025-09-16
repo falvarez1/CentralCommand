@@ -1,3 +1,4 @@
+using CentralCommand.Core.Domain.Enums;
 using CentralCommand.Core.DTOs.Common;
 using CentralCommand.Core.DTOs.Responses;
 using CentralCommand.Core.Extensions;
@@ -35,7 +36,7 @@ public class GetPortalsQueryHandler : IRequestHandler<GetPortalsQuery, PagedResu
             filteredPortals = filteredPortals.Where(p =>
                 p.Name.ToLower().Contains(searchLower) ||
                 (p.Description != null && p.Description.ToLower().Contains(searchLower)) ||
-                p.Category.ToLower().Contains(searchLower));
+                p.Category.ToString().ToLower().Contains(searchLower));
         }
 
         if (request.Status.HasValue)
@@ -50,7 +51,10 @@ public class GetPortalsQueryHandler : IRequestHandler<GetPortalsQuery, PagedResu
 
         if (!string.IsNullOrWhiteSpace(request.Category))
         {
-            filteredPortals = filteredPortals.Where(p => p.Category == request.Category);
+            if (Enum.TryParse<PortalCategory>(request.Category, true, out var category))
+            {
+                filteredPortals = filteredPortals.Where(p => p.Category == category);
+            }
         }
 
         // Apply sorting
@@ -87,15 +91,14 @@ public class GetPortalsQueryHandler : IRequestHandler<GetPortalsQuery, PagedResu
             .Take(request.PageSize)
             .ToList();
 
-        var portalResponses = pagedPortals.Select(p => p.ToResponse()).ToList();
+        var portalResponses = pagedPortals.Select(p => p.ToResponse()!).ToList();
 
         return new PagedResult<PortalResponse>
         {
             Items = portalResponses,
             PageNumber = request.PageNumber,
             PageSize = request.PageSize,
-            TotalItems = totalItems,
-            TotalPages = (int)Math.Ceiling(totalItems / (double)request.PageSize)
+            TotalCount = totalItems
         };
     }
 }
