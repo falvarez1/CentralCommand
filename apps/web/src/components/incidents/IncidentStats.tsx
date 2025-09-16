@@ -19,6 +19,7 @@ import {
 import { IncidentStats as IIncidentStats, IncidentSeverity, IncidentType } from '../../types/incident.types';
 import { useIncidentStore } from '../../stores/useIncidentStore';
 import { cn } from '../../lib/utils';
+import { Separator } from '../ui/separator';
 
 interface IncidentStatsProps {
   stats?: IIncidentStats;
@@ -33,23 +34,23 @@ const severityConfig = {
     bgColor: 'bg-red-100 dark:bg-red-950',
     label: 'Critical'
   },
+  [IncidentSeverity.High]: {
+    icon: AlertTriangle,
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-100 dark:bg-orange-950',
+    label: 'High'
+  },
   [IncidentSeverity.Medium]: {
     icon: AlertTriangle,
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-100 dark:bg-yellow-950',
-    label: 'Warning'
+    label: 'Medium'
   },
   [IncidentSeverity.Low]: {
     icon: Info,
     color: 'text-blue-500',
     bgColor: 'bg-blue-100 dark:bg-blue-950',
-    label: 'Info'
-  },
-  [IncidentSeverity.Low]: {
-    icon: CheckCircle,
-    color: 'text-green-500',
-    bgColor: 'bg-green-100 dark:bg-green-950',
-    label: 'Success'
+    label: 'Low'
   }
 };
 
@@ -196,16 +197,9 @@ export const IncidentStats: React.FC<IncidentStatsProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-sm">Identified</span>
+                  <span className="text-sm">Acknowledged</span>
                 </div>
-                <Badge variant="outline">{stats.identified}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <span className="text-sm">Monitoring</span>
-                </div>
-                <Badge variant="outline">{stats.monitoring}</Badge>
+                <Badge variant="outline">{stats.acknowledged || 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -336,8 +330,5 @@ export const IncidentStats: React.FC<IncidentStatsProps> = ({
     </div>
   );
 };
-
-// Add missing Separator component import
-import { Separator } from '../ui/separator';
 
 export default IncidentStats;

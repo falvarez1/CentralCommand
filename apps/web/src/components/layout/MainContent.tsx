@@ -69,7 +69,7 @@ export const MainContent: React.FC<MainContentProps> = ({
   const stats = useMemo(() => {
     if (systemStats) return systemStats;
 
-    const operational = portals.filter(p => p.status === PortalStatus.OPERATIONAL).length;
+    const operational = portals.filter(p => p.status === PortalStatus.Operational).length;
     const totalRequests = portals.reduce((sum, p) => sum + p.requests, 0);
     const totalErrors = portals.reduce((sum, p) => sum + p.errors, 0);
     const avgResponseTime = portals.length > 0

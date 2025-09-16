@@ -30,28 +30,28 @@ interface PortalCardAccessibleProps {
 }
 
 const statusConfig = {
-  [PortalStatus.OPERATIONAL]: {
+  [PortalStatus.Operational]: {
     icon: CheckCircle,
     color: 'text-green-500',
     bgColor: 'bg-green-500/10',
     label: 'Operational',
     ariaLabel: 'Portal is operational'
   },
-  [PortalStatus.DEGRADED]: {
+  [PortalStatus.Degraded]: {
     icon: AlertTriangle,
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-500/10',
     label: 'Degraded',
     ariaLabel: 'Portal is experiencing degraded performance'
   },
-  [PortalStatus.OUTAGE]: {
+  [PortalStatus.Outage]: {
     icon: XCircle,
     color: 'text-red-500',
     bgColor: 'bg-red-500/10',
     label: 'Outage',
     ariaLabel: 'Portal is experiencing an outage'
   },
-  [PortalStatus.MAINTENANCE]: {
+  [PortalStatus.Maintenance]: {
     icon: Wrench,
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',

@@ -26,20 +26,20 @@ export const PortalList: React.FC<PortalListProps> = ({
 }) => {
   const getStatusColor = (status: PortalStatus) => {
     switch (status) {
-      case PortalStatus.OPERATIONAL: return 'bg-green-500'
-      case PortalStatus.DEGRADED: return 'bg-yellow-500'
-      case PortalStatus.MAINTENANCE: return 'bg-orange-500'
-      case PortalStatus.OUTAGE: return 'bg-red-500'
+      case PortalStatus.Operational: return 'bg-green-500'
+      case PortalStatus.Degraded: return 'bg-yellow-500'
+      case PortalStatus.Maintenance: return 'bg-orange-500'
+      case PortalStatus.Outage: return 'bg-red-500'
       default: return 'bg-gray-500'
     }
   }
 
   const getStatusIcon = (status: PortalStatus) => {
     switch (status) {
-      case PortalStatus.OPERATIONAL: return <CheckCircle className="h-4 w-4 text-green-500" />
-      case PortalStatus.DEGRADED: return <AlertTriangle className="h-4 w-4 text-yellow-500" />
-      case PortalStatus.MAINTENANCE: return <Clock className="h-4 w-4 text-orange-500" />
-      case PortalStatus.OUTAGE: return <XCircle className="h-4 w-4 text-red-500" />
+      case PortalStatus.Operational: return <CheckCircle className="h-4 w-4 text-green-500" />
+      case PortalStatus.Degraded: return <AlertTriangle className="h-4 w-4 text-yellow-500" />
+      case PortalStatus.Maintenance: return <Clock className="h-4 w-4 text-orange-500" />
+      case PortalStatus.Outage: return <XCircle className="h-4 w-4 text-red-500" />
       default: return null
     }
   }
@@ -90,7 +90,7 @@ export const PortalList: React.FC<PortalListProps> = ({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
               {getStatusIcon(portal.status)}
-              <Badge variant={portal.status === PortalStatus.OPERATIONAL ? 'default' : 'secondary'}>
+              <Badge variant={portal.status === PortalStatus.Operational ? 'default' : 'secondary'}>
                 {portal.status}
               </Badge>
             </div>

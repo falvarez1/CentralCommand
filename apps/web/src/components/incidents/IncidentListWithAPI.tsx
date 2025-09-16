@@ -78,7 +78,7 @@ export const IncidentListWithAPI: React.FC<IncidentListWithAPIProps> = ({
       <div className="text-center py-8 text-muted-foreground">
         <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
         <p>No incidents found</p>
-        {status === 'active' && (
+        {(status === IncidentStatus.Open || status === IncidentStatus.InProgress) && (
           <p className="text-sm mt-2">All systems operational</p>
         )}
       </div>

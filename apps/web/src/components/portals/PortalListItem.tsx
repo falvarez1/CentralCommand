@@ -54,13 +54,13 @@ const StatusIcon: React.FC<{ status: PortalStatus; size?: 'sm' | 'md' }> = ({ st
   const sizeClass = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
 
   switch (status) {
-    case PortalStatus.OPERATIONAL:
+    case PortalStatus.Operational:
       return <CheckCircle className={cn(sizeClass, 'text-green-500')} />;
-    case PortalStatus.DEGRADED:
+    case PortalStatus.Degraded:
       return <AlertCircle className={cn(sizeClass, 'text-yellow-500')} />;
-    case PortalStatus.MAINTENANCE:
+    case PortalStatus.Maintenance:
       return <Wrench className={cn(sizeClass, 'text-blue-500')} />;
-    case PortalStatus.OUTAGE:
+    case PortalStatus.Outage:
       return <XCircle className={cn(sizeClass, 'text-red-500')} />;
     default:
       return null;
@@ -70,13 +70,13 @@ const StatusIcon: React.FC<{ status: PortalStatus; size?: 'sm' | 'md' }> = ({ st
 // Status badge variant
 const getStatusVariant = (status: PortalStatus): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
-    case PortalStatus.OPERATIONAL:
+    case PortalStatus.Operational:
       return "default";
-    case PortalStatus.DEGRADED:
+    case PortalStatus.Degraded:
       return "secondary";
-    case PortalStatus.MAINTENANCE:
+    case PortalStatus.Maintenance:
       return "outline";
-    case PortalStatus.OUTAGE:
+    case PortalStatus.Outage:
       return "destructive";
     default:
       return "default";
@@ -204,7 +204,7 @@ export const PortalListItem: React.FC<PortalListItemProps> = ({
                 e.stopPropagation();
                 onQuickLogin?.(portal);
               }}
-              disabled={portal.status === PortalStatus.OUTAGE || portal.status === PortalStatus.MAINTENANCE}
+              disabled={portal.status === PortalStatus.Outage || portal.status === PortalStatus.Maintenance}
             >
               <LogIn className="w-4 h-4 mr-1" />
               Login
@@ -216,7 +216,7 @@ export const PortalListItem: React.FC<PortalListItemProps> = ({
                 e.stopPropagation();
                 onOpenInNewWindow?.(portal);
               }}
-              disabled={portal.status === PortalStatus.OUTAGE || portal.status === PortalStatus.MAINTENANCE}
+              disabled={portal.status === PortalStatus.Outage || portal.status === PortalStatus.Maintenance}
             >
               <ExternalLink className="w-4 h-4" />
             </Button>
@@ -293,7 +293,7 @@ export const PortalListItem: React.FC<PortalListItemProps> = ({
                 e.stopPropagation();
                 onQuickLogin?.(portal);
               }}
-              disabled={portal.status === PortalStatus.OUTAGE || portal.status === PortalStatus.MAINTENANCE}
+              disabled={portal.status === PortalStatus.Outage || portal.status === PortalStatus.Maintenance}
             >
               <LogIn className="w-4 h-4 mr-1" />
               Login
@@ -306,7 +306,7 @@ export const PortalListItem: React.FC<PortalListItemProps> = ({
                 e.stopPropagation();
                 onOpenInNewWindow?.(portal);
               }}
-              disabled={portal.status === PortalStatus.OUTAGE || portal.status === PortalStatus.MAINTENANCE}
+              disabled={portal.status === PortalStatus.Outage || portal.status === PortalStatus.Maintenance}
             >
               <ExternalLink className="w-4 h-4" />
             </Button>

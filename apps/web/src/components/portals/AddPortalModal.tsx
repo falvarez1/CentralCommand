@@ -54,7 +54,7 @@ export const AddPortalModal: React.FC<AddPortalModalProps> = ({ open, onClose })
       url: formData.url,
       description: formData.description,
       category: formData.category,
-      status: PortalStatus.OPERATIONAL,
+      status: PortalStatus.Operational,
       environment: formData.environment,
       priority: formData.priority,
       authType: formData.authType,

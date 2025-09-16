@@ -14,6 +14,8 @@ import {
   HealthCheckResult,
   DashboardWidget
 } from '../types/stats.types';
+import { PortalStatus } from '../types/portal.types';
+import { IncidentStatus } from '../types/incident.types';
 import { usePortalStore } from './usePortalStore';
 import { useIncidentStore } from './useIncidentStore';
 
@@ -237,8 +239,8 @@ export const useStatsStore = create<StatsState>()(
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         // Calculate portal stats
-        const activePortals = portals.filter(p => p.status === 'operational').length;
-        const inactivePortals = portals.filter(p => p.status === 'outage').length;
+        const activePortals = portals.filter(p => p.status === PortalStatus.OPERATIONAL).length;
+        const inactivePortals = portals.filter(p => p.status === PortalStatus.OUTAGE).length;
 
         // Calculate average metrics
         let totalResponseTime = 0;
@@ -260,7 +262,7 @@ export const useStatsStore = create<StatsState>()(
         const portalCount = portals.length || 1;
 
         // Calculate incident stats
-        const activeIncidents = incidents.filter(i => i.status !== 'resolved').length;
+        const activeIncidents = incidents.filter(i => i.status !== IncidentStatus.RESOLVED).length;
         const resolvedToday = incidents.filter(i =>
           i.resolvedAt && i.resolvedAt >= today
         ).length;

@@ -6,7 +6,7 @@ export const portalSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   url: z.string().url('Invalid URL'),
   category: z.string().min(1, 'Category is required'),
-  status: z.enum(['operational', 'degraded', 'maintenance', 'outage']),
+  status: z.enum(['Operational', 'Degraded', 'Maintenance', 'Outage']),
   responseTime: z.number().min(0),
   uptime: z.number().min(0).max(100),
   cpu: z.number().min(0).max(100),
@@ -30,8 +30,8 @@ export const incidentSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().min(1, 'Description is required'),
-  severity: z.enum(['critical', 'major', 'minor', 'info']),
-  status: z.enum(['active', 'investigating', 'resolved']),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']),
+  status: z.enum(['Open', 'InProgress', 'Acknowledged', 'Resolved', 'Closed']),
   affectedServices: z.array(z.string()),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -41,7 +41,7 @@ export const incidentSchema = z.object({
 export const createIncidentSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().min(1, 'Description is required'),
-  severity: z.enum(['critical', 'major', 'minor', 'info']),
+  severity: z.enum(['Critical', 'High', 'Medium', 'Low']),
   affectedServices: z.array(z.string()).min(1, 'At least one affected service is required'),
 })
 

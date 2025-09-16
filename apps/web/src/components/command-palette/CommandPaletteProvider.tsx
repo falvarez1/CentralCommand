@@ -98,7 +98,7 @@ export const CommandPaletteProvider: React.FC<{ children: React.ReactNode }> = (
 
     // Add quick open commands for favorite portals
     portals
-      .filter(portal => portal.isFavorite && portal.status === PortalStatus.OPERATIONAL)
+      .filter(portal => portal.isFavorite && portal.status === PortalStatus.Operational)
       .slice(0, 5)
       .forEach(portal => {
         const extCommand: ExtendedCommand = {

@@ -166,10 +166,10 @@ const CategoryTab: React.FC<{
 // Quick stats component
 const QuickStats: React.FC<{ portals: Portal[] }> = ({ portals }) => {
   const stats = {
-    operational: portals.filter(p => p.status === PortalStatus.OPERATIONAL).length,
-    degraded: portals.filter(p => p.status === PortalStatus.DEGRADED).length,
-    maintenance: portals.filter(p => p.status === PortalStatus.MAINTENANCE).length,
-    outage: portals.filter(p => p.status === PortalStatus.OUTAGE).length,
+    operational: portals.filter(p => p.status === PortalStatus.Operational).length,
+    degraded: portals.filter(p => p.status === PortalStatus.Degraded).length,
+    maintenance: portals.filter(p => p.status === PortalStatus.Maintenance).length,
+    outage: portals.filter(p => p.status === PortalStatus.Outage).length,
   };
 
   return (
@@ -211,10 +211,10 @@ export const PortalFilters: React.FC<PortalFiltersProps> = ({
       label: 'All Portals',
       icon: Layers,
       count: portals.length,
-      operational: portals.filter(p => p.status === PortalStatus.OPERATIONAL).length,
-      degraded: portals.filter(p => p.status === PortalStatus.DEGRADED).length,
-      maintenance: portals.filter(p => p.status === PortalStatus.MAINTENANCE).length,
-      outage: portals.filter(p => p.status === PortalStatus.OUTAGE).length,
+      operational: portals.filter(p => p.status === PortalStatus.Operational).length,
+      degraded: portals.filter(p => p.status === PortalStatus.Degraded).length,
+      maintenance: portals.filter(p => p.status === PortalStatus.Maintenance).length,
+      outage: portals.filter(p => p.status === PortalStatus.Outage).length,
     }
   ];
 
@@ -228,10 +228,10 @@ export const PortalFilters: React.FC<PortalFiltersProps> = ({
       label: category,
       icon: getCategoryIcon(category),
       count: categoryPortals.length,
-      operational: categoryPortals.filter(p => p.status === PortalStatus.OPERATIONAL).length,
-      degraded: categoryPortals.filter(p => p.status === PortalStatus.DEGRADED).length,
-      maintenance: categoryPortals.filter(p => p.status === PortalStatus.MAINTENANCE).length,
-      outage: categoryPortals.filter(p => p.status === PortalStatus.OUTAGE).length,
+      operational: categoryPortals.filter(p => p.status === PortalStatus.Operational).length,
+      degraded: categoryPortals.filter(p => p.status === PortalStatus.Degraded).length,
+      maintenance: categoryPortals.filter(p => p.status === PortalStatus.Maintenance).length,
+      outage: categoryPortals.filter(p => p.status === PortalStatus.Outage).length,
     });
   });
 

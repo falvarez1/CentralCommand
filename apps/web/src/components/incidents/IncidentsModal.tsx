@@ -146,9 +146,9 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
 
   const severityFilters = [
     { value: IncidentSeverity.Critical, label: 'Critical', color: 'bg-red-500' },
-    { value: IncidentSeverity.Medium, label: 'Warning', color: 'bg-yellow-500' },
-    { value: IncidentSeverity.Low, label: 'Info', color: 'bg-blue-500' },
-    { value: IncidentSeverity.Low, label: 'Success', color: 'bg-green-500' }
+    { value: IncidentSeverity.High, label: 'High', color: 'bg-orange-500' },
+    { value: IncidentSeverity.Medium, label: 'Medium', color: 'bg-yellow-500' },
+    { value: IncidentSeverity.Low, label: 'Low', color: 'bg-blue-500' }
   ];
 
   return (

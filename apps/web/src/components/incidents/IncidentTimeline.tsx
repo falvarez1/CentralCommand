@@ -35,16 +35,16 @@ type FilterType = 'all' | 'critical' | 'resolved' | 'pending';
 
 const severityIcons = {
   [IncidentSeverity.Critical]: AlertCircle,
+  [IncidentSeverity.High]: AlertTriangle,
   [IncidentSeverity.Medium]: AlertTriangle,
-  [IncidentSeverity.Low]: Info,
-  [IncidentSeverity.Low]: CheckCircle
+  [IncidentSeverity.Low]: Info
 };
 
 const severityColors = {
   [IncidentSeverity.Critical]: 'text-red-500 dark:text-red-400',
+  [IncidentSeverity.High]: 'text-orange-500 dark:text-orange-400',
   [IncidentSeverity.Medium]: 'text-yellow-500 dark:text-yellow-400',
-  [IncidentSeverity.Low]: 'text-blue-500 dark:text-blue-400',
-  [IncidentSeverity.Low]: 'text-green-500 dark:text-green-400'
+  [IncidentSeverity.Low]: 'text-blue-500 dark:text-blue-400'
 };
 
 const typeIcons = {
@@ -62,7 +62,6 @@ const statusColors = {
   [IncidentStatus.Open]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
   [IncidentStatus.InProgress]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
   [IncidentStatus.Acknowledged]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  [IncidentStatus.InProgress]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
   [IncidentStatus.Resolved]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   [IncidentStatus.Closed]: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
 };

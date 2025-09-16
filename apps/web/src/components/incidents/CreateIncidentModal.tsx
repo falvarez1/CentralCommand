@@ -221,16 +221,22 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                       Critical
                     </div>
                   </SelectItem>
+                  <SelectItem value={IncidentSeverity.High}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-orange-500" />
+                      High
+                    </div>
+                  </SelectItem>
                   <SelectItem value={IncidentSeverity.Medium}>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                      Warning
+                      Medium
                     </div>
                   </SelectItem>
                   <SelectItem value={IncidentSeverity.Low}>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      Info
+                      Low
                     </div>
                   </SelectItem>
                 </SelectContent>

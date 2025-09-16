@@ -64,13 +64,13 @@ const StatusIcon: React.FC<{ status: PortalStatus; size?: 'sm' | 'md' | 'lg' }> 
   const sizeClass = size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6';
 
   switch (status) {
-    case PortalStatus.OPERATIONAL:
+    case PortalStatus.Operational:
       return <CheckCircle className={cn(sizeClass, 'text-green-500')} />;
-    case PortalStatus.DEGRADED:
+    case PortalStatus.Degraded:
       return <AlertCircle className={cn(sizeClass, 'text-yellow-500')} />;
-    case PortalStatus.MAINTENANCE:
+    case PortalStatus.Maintenance:
       return <Wrench className={cn(sizeClass, 'text-blue-500')} />;
-    case PortalStatus.OUTAGE:
+    case PortalStatus.Outage:
       return <XCircle className={cn(sizeClass, 'text-red-500')} />;
     default:
       return null;
@@ -255,9 +255,9 @@ export const PortalDetailsModal: React.FC<PortalDetailsModalProps> = ({
             <div className="flex items-center gap-2">
               <Badge
                 variant={
-                  portal.status === PortalStatus.OPERATIONAL ? 'default' :
-                  portal.status === PortalStatus.DEGRADED ? 'secondary' :
-                  portal.status === PortalStatus.MAINTENANCE ? 'outline' :
+                  portal.status === PortalStatus.Operational ? 'default' :
+                  portal.status === PortalStatus.Degraded ? 'secondary' :
+                  portal.status === PortalStatus.Maintenance ? 'outline' :
                   'destructive'
                 }
                 className="gap-1"

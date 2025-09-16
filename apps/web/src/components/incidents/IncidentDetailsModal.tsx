@@ -60,6 +60,13 @@ const severityConfig = {
     borderColor: 'border-red-200 dark:border-red-800',
     badge: 'destructive' as const
   },
+  [IncidentSeverity.High]: {
+    icon: AlertTriangle,
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-50 dark:bg-orange-950',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    badge: 'warning' as const
+  },
   [IncidentSeverity.Medium]: {
     icon: AlertTriangle,
     color: 'text-yellow-500',
@@ -73,13 +80,6 @@ const severityConfig = {
     bgColor: 'bg-blue-50 dark:bg-blue-950',
     borderColor: 'border-blue-200 dark:border-blue-800',
     badge: 'default' as const
-  },
-  [IncidentSeverity.Low]: {
-    icon: CheckCircle,
-    color: 'text-green-500',
-    bgColor: 'bg-green-50 dark:bg-green-950',
-    borderColor: 'border-green-200 dark:border-green-800',
-    badge: 'success' as const
   }
 };
 
@@ -96,9 +96,8 @@ const typeIcons = {
 
 const statusConfig = {
   [IncidentStatus.Open]: { label: 'Open', color: 'text-red-600 dark:text-red-400' },
-  [IncidentStatus.InProgress]: { label: 'Investigating', color: 'text-yellow-600 dark:text-yellow-400' },
-  [IncidentStatus.Acknowledged]: { label: 'Identified', color: 'text-blue-600 dark:text-blue-400' },
-  [IncidentStatus.InProgress]: { label: 'Monitoring', color: 'text-indigo-600 dark:text-indigo-400' },
+  [IncidentStatus.InProgress]: { label: 'In Progress', color: 'text-yellow-600 dark:text-yellow-400' },
+  [IncidentStatus.Acknowledged]: { label: 'Acknowledged', color: 'text-blue-600 dark:text-blue-400' },
   [IncidentStatus.Resolved]: { label: 'Resolved', color: 'text-green-600 dark:text-green-400' },
   [IncidentStatus.Closed]: { label: 'Closed', color: 'text-gray-600 dark:text-gray-400' }
 };
