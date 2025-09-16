@@ -70,13 +70,13 @@ export const MainContent: React.FC<MainContentProps> = ({
     if (systemStats) return systemStats;
 
     const operational = portals.filter(p => p.status === PortalStatus.Operational).length;
-    const totalRequests = portals.reduce((sum, p) => sum + p.requests, 0);
-    const totalErrors = portals.reduce((sum, p) => sum + p.errors, 0);
+    const totalRequests = portals.reduce((sum, p) => sum + (p.requests || 0), 0);
+    const totalErrors = portals.reduce((sum, p) => sum + (p.errors || 0), 0);
     const avgResponseTime = portals.length > 0
-      ? Math.round(portals.reduce((sum, p) => sum + p.responseTime, 0) / portals.length)
+      ? Math.round(portals.reduce((sum, p) => sum + (p.responseTime || 0), 0) / portals.length)
       : 0;
     const avgUptime = portals.length > 0
-      ? (portals.reduce((sum, p) => sum + p.uptime, 0) / portals.length).toFixed(2)
+      ? parseFloat((portals.reduce((sum, p) => sum + (p.uptime || 0), 0) / portals.length).toFixed(2))
       : 0;
 
     return {
@@ -102,7 +102,7 @@ export const MainContent: React.FC<MainContentProps> = ({
     {
       title: 'Operational',
       value: `${stats.operationalPortals}/${stats.totalPortals}`,
-      change: ((stats.operationalPortals / stats.totalPortals) * 100),
+      change: stats.totalPortals > 0 ? ((stats.operationalPortals / stats.totalPortals) * 100) : 0,
       changeLabel: 'uptime',
       icon: Activity,
       color: 'text-green-500',
@@ -110,7 +110,7 @@ export const MainContent: React.FC<MainContentProps> = ({
     },
     {
       title: 'Avg Response',
-      value: `${stats.avgResponseTime}ms`,
+      value: `${isNaN(stats.avgResponseTime) ? 0 : stats.avgResponseTime}ms`,
       change: -12,
       changeLabel: 'vs last hour',
       icon: TrendingDown,
@@ -119,7 +119,7 @@ export const MainContent: React.FC<MainContentProps> = ({
     },
     {
       title: 'Total Requests',
-      value: stats.totalRequests.toLocaleString(),
+      value: isNaN(stats.totalRequests) ? '0' : stats.totalRequests.toLocaleString(),
       change: 15,
       changeLabel: 'vs yesterday',
       icon: TrendingUp,
@@ -180,7 +180,7 @@ export const MainContent: React.FC<MainContentProps> = ({
                       "text-xs font-medium",
                       stat.change > 0 ? "text-green-500" : "text-red-500"
                     )}>
-                      {Math.abs(stat.change)}%
+                      {Math.abs(stat.change).toFixed(stat.change % 1 !== 0 ? 1 : 0)}%
                     </span>
                   </div>
                 )}
