@@ -336,7 +336,7 @@ GET    /api/v1/statistics/sparklines # Time-series data
 ### Development
 ```bash
 # API
-cd apps/api/CentralCommand.Api
+cd backend/src/CentralCommand.Api
 dotnet run
 
 # Frontend

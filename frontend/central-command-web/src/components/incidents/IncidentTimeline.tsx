@@ -48,14 +48,15 @@ const severityColors = {
 };
 
 const typeIcons = {
-  [IncidentType.OUTAGE]: Activity,
-  [IncidentType.PERFORMANCE]: TrendingUp,
-  [IncidentType.MAINTENANCE]: Clock,
-  [IncidentType.SECURITY]: Lock,
-  [IncidentType.DATABASE]: Database,
-  [IncidentType.SERVICE]: Server,
-  [IncidentType.INFRASTRUCTURE]: Shield,
-  [IncidentType.NETWORK]: Wifi
+  [IncidentType.Outage]: Activity,
+  [IncidentType.Performance]: TrendingUp,
+  [IncidentType.Maintenance]: Clock,
+  [IncidentType.Security]: Lock,
+  [IncidentType.Database]: Database,
+  [IncidentType.Service]: Server,
+  [IncidentType.Infrastructure]: Shield,
+  [IncidentType.Network]: Wifi,
+  [IncidentType.Configuration]: Server
 };
 
 const statusColors = {

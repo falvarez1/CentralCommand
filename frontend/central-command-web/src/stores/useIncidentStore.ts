@@ -196,8 +196,73 @@ export const useIncidentStore = create<IncidentState>()(
   devtools(
     persist(
       immer((set, get) => ({
-        // Initial state
-        incidents: [],
+        // Initial state with sample data for development
+        incidents: [
+          {
+            id: '1',
+            title: 'Database Connection Timeout',
+            description: 'Production database is experiencing connection timeouts',
+            type: IncidentType.Database,
+            severity: IncidentSeverity.High,
+            status: IncidentStatus.Open,
+            affectedPortals: [],
+            affectedServices: ['Database Service'],
+            impactedUsers: 500,
+            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+            updatedAt: new Date(),
+            tags: ['database', 'production'],
+            timeline: [],
+            isPublic: false,
+            createdBy: 'system',
+            updatedBy: 'system',
+            commentCount: 0
+          },
+          {
+            id: '2',
+            title: 'API Gateway Performance Degradation',
+            description: 'API response times have increased significantly',
+            type: IncidentType.Performance,
+            severity: IncidentSeverity.Medium,
+            status: IncidentStatus.InProgress,
+            affectedPortals: [],
+            affectedServices: ['API Gateway'],
+            impactedUsers: 200,
+            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+            updatedAt: new Date(),
+            tags: ['api', 'performance'],
+            timeline: [],
+            isPublic: false,
+            createdBy: 'system',
+            updatedBy: 'system',
+            commentCount: 2
+          },
+          {
+            id: '3',
+            title: 'Network Connectivity Issues',
+            description: 'Intermittent network connectivity problems in EU region',
+            type: IncidentType.Network,
+            severity: IncidentSeverity.Critical,
+            status: IncidentStatus.Resolved,
+            affectedPortals: [],
+            affectedServices: ['Network Infrastructure'],
+            impactedUsers: 1000,
+            createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+            updatedAt: new Date(),
+            resolvedAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // Resolved 12 hours ago
+            tags: ['network', 'eu-region'],
+            timeline: [],
+            isPublic: true,
+            createdBy: 'system',
+            updatedBy: 'system',
+            commentCount: 5,
+            metrics: {
+              mttr: 180, // 3 hours
+              mtbf: 720, // 12 hours
+              impactDuration: 180,
+              severityChanges: 1
+            }
+          }
+        ],
         filter: {},
         selectedIncident: null,
         isLoading: false,
@@ -292,9 +357,12 @@ export const useIncidentStore = create<IncidentState>()(
             total: incidents.length,
             open: incidents.filter(i => i.status === IncidentStatus.Open).length,
             inProgress: incidents.filter(i => i.status === IncidentStatus.InProgress).length,
-            acknowledged: incidents.filter(i => i.status === IncidentStatus.Acknowledged).length,
+            acknowledgedIncidents: incidents.filter(i => i.status === IncidentStatus.Acknowledged).length,
             resolved: incidents.filter(i => i.status === IncidentStatus.Resolved).length,
             closed: incidents.filter(i => i.status === IncidentStatus.Closed).length,
+            // Legacy aliases for backward compatibility
+            investigating: incidents.filter(i => i.status === IncidentStatus.InProgress).length,
+            acknowledged: incidents.filter(i => i.status === IncidentStatus.Acknowledged).length,
             bySeverity: {
               [IncidentSeverity.Critical]: incidents.filter(i => i.severity === IncidentSeverity.Critical).length,
               [IncidentSeverity.High]: incidents.filter(i => i.severity === IncidentSeverity.High).length,

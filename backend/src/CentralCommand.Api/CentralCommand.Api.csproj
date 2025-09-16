@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\libs\CentralCommand.Core\CentralCommand.Core.csproj" />
+    <ProjectReference Include="..\CentralCommand.Core\CentralCommand.Core.csproj" />
   </ItemGroup>
 
 </Project>

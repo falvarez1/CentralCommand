@@ -110,7 +110,7 @@ export const IncidentsPage = () => {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value={IncidentStatus.Open}>Open</SelectItem>
-              <SelectItem value={IncidentStatus.IN_PROGRESS}>In Progress</SelectItem>
+              <SelectItem value={IncidentStatus.InProgress}>In Progress</SelectItem>
               <SelectItem value={IncidentStatus.Resolved}>Resolved</SelectItem>
               <SelectItem value={IncidentStatus.Closed}>Closed</SelectItem>
             </SelectContent>

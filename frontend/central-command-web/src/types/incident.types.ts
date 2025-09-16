@@ -200,16 +200,21 @@ export interface IncidentFilter extends z.infer<typeof IncidentFilterSchema> {}
 export const IncidentStatsSchema = z.object({
   total: z.number().nonnegative(),
   open: z.number().nonnegative(),
-  investigating: z.number().nonnegative(),
-  identified: z.number().nonnegative(),
-  monitoring: z.number().nonnegative(),
+  inProgress: z.number().nonnegative(),
   resolved: z.number().nonnegative(),
+  closed: z.number().nonnegative(),
+  acknowledgedIncidents: z.number().nonnegative().optional(),
   bySeverity: z.record(z.nativeEnum(IncidentSeverity), z.number()),
   byType: z.record(z.nativeEnum(IncidentType), z.number()),
   last24Hours: z.number().nonnegative(),
   last7Days: z.number().nonnegative(),
   averageMTTR: z.number().nonnegative(), // Mean Time To Recovery in minutes
-  averageMTBF: z.number().nonnegative() // Mean Time Between Failures in minutes
+  averageMTBF: z.number().nonnegative(), // Mean Time Between Failures in minutes
+  // Legacy aliases for backward compatibility
+  investigating: z.number().nonnegative().optional(),
+  identified: z.number().nonnegative().optional(),
+  monitoring: z.number().nonnegative().optional(),
+  acknowledged: z.number().nonnegative().optional()
 });
 
 export interface IncidentStats extends z.infer<typeof IncidentStatsSchema> {}

@@ -55,14 +55,15 @@ const severityConfig = {
 };
 
 const typeLabels: Record<IncidentType, string> = {
-  [IncidentType.OUTAGE]: 'Outage',
-  [IncidentType.PERFORMANCE]: 'Performance',
-  [IncidentType.MAINTENANCE]: 'Maintenance',
-  [IncidentType.SECURITY]: 'Security',
-  [IncidentType.DATABASE]: 'Database',
-  [IncidentType.SERVICE]: 'Service',
-  [IncidentType.INFRASTRUCTURE]: 'Infrastructure',
-  [IncidentType.NETWORK]: 'Network'
+  [IncidentType.Outage]: 'Outage',
+  [IncidentType.Performance]: 'Performance',
+  [IncidentType.Maintenance]: 'Maintenance',
+  [IncidentType.Security]: 'Security',
+  [IncidentType.Database]: 'Database',
+  [IncidentType.Service]: 'Service',
+  [IncidentType.Infrastructure]: 'Infrastructure',
+  [IncidentType.Network]: 'Network',
+  [IncidentType.Configuration]: 'Configuration'
 };
 
 export const IncidentStats: React.FC<IncidentStatsProps> = ({
@@ -190,16 +191,16 @@ export const IncidentStats: React.FC<IncidentStatsProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                  <span className="text-sm">Investigating</span>
+                  <span className="text-sm">In Progress</span>
                 </div>
-                <Badge variant="outline">{stats.investigating}</Badge>
+                <Badge variant="outline">{stats.inProgress || 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-sm">Acknowledged</span>
                 </div>
-                <Badge variant="outline">{stats.acknowledged || 0}</Badge>
+                <Badge variant="outline">{stats.acknowledgedIncidents || 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

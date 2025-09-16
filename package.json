@@ -10,23 +10,23 @@
     "npm": ">=9.0.0"
   },
   "workspaces": [
-    "apps/*",
+    "frontend/*",
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=apps/web",
-    "dev:web": "npm run dev --workspace=apps/web",
-    "dev:api": "cd apps/api/CentralCommand.MockApi && dotnet run",
+    "dev": "npm run dev --workspace=frontend/central-command-web",
+    "dev:web": "npm run dev --workspace=frontend/central-command-web",
+    "dev:api": "cd backend/src/CentralCommand.Api && dotnet run --urls http://localhost:5000",
     "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
     "build": "npm run build:web",
-    "build:web": "npm run build --workspace=apps/web",
-    "build:api": "cd apps/api/CentralCommand.MockApi && dotnet build",
+    "build:web": "npm run build --workspace=frontend/central-command-web",
+    "build:api": "cd backend && dotnet build",
     "build:all": "npm run build:web && npm run build:api",
-    "test": "npm run test --workspace=apps/web",
-    "test:e2e": "npm run test:e2e --workspace=apps/web",
-    "lint": "npm run lint --workspace=apps/web",
+    "test": "npm run test --workspace=frontend/central-command-web",
+    "test:e2e": "npm run test:e2e --workspace=frontend/central-command-web",
+    "lint": "npm run lint --workspace=frontend/central-command-web",
     "clean": "npm run clean --workspaces --if-present && rimraf node_modules",
-    "install:all": "npm install && cd apps/api/CentralCommand.MockApi && dotnet restore",
+    "install:all": "npm install && cd backend && dotnet restore",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .gitignore",
     "prepare": "husky install"
   },

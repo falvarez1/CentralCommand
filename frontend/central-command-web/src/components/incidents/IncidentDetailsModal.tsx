@@ -128,6 +128,10 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
   const [rootCauseNotes, setRootCauseNotes] = useState('');
   const [isEditingResolution, setIsEditingResolution] = useState(false);
 
+  if (!incident || !isOpen) {
+    return null;
+  }
+
   const config = severityConfig[incident.severity];
   const SeverityIcon = config.icon;
   const TypeIcon = typeIcons[incident.type];

@@ -42,11 +42,11 @@ CentralCommand/
 dotnet build
 
 # Run the main API
-cd apps/api/CentralCommand.Api
+cd backend/src/CentralCommand.Api
 dotnet run --urls http://localhost:5000
 
 # Or run the mock API for development
-cd apps/api/CentralCommand.MockApi
+cd backend/src/CentralCommand.MockApi
 dotnet run --urls http://localhost:5001
 ```
 
@@ -189,7 +189,7 @@ npm run build
 ## 🔗 Related Projects
 
 - [Central Command React](./central-command-react/README.md) - Frontend documentation
-- [Mock API](./apps/api/CentralCommand.MockApi/README.md) - Mock API documentation
+- [Mock API](./backend/src/CentralCommand.MockApi/README.md) - Mock API documentation
 
 ## 👥 Team
 

@@ -15,14 +15,19 @@ Central Command - An enterprise portal management system built with clean archit
 ### Monorepo Structure
 ```
 CentralCommand/
-├── apps/
-│   └── api/
-│       ├── CentralCommand.Api/        # Main API (.NET 9)
-│       └── CentralCommand.MockApi/    # Mock API for development
-├── libs/
-│   └── CentralCommand.Core/           # Shared domain models, DTOs, interfaces
-├── central-command-react/              # React frontend application
-└── prototype/                          # HTML prototype
+├── backend/                            # All .NET projects
+│   ├── src/
+│   │   ├── CentralCommand.Api/        # Main API (.NET 9)
+│   │   ├── CentralCommand.Core/       # Shared domain models, DTOs, interfaces
+│   │   └── CentralCommand.MockApi/    # Mock API for development
+│   ├── tests/                          # Backend tests
+│   └── CentralCommand.sln              # Solution file
+├── frontend/
+│   └── central-command-web/            # React frontend application
+├── packages/                            # Shared JS/TS packages
+│   ├── shared-types/
+│   └── ui-components/
+└── docs/                                # Documentation
 ```
 
 ### Key Architectural Decisions
@@ -43,11 +48,11 @@ CentralCommand/
 dotnet build
 
 # Run main API
-cd apps/api/CentralCommand.Api
+cd backend/src/CentralCommand.Api
 dotnet run --urls http://localhost:5000
 
 # Run mock API
-cd apps/api/CentralCommand.MockApi
+cd backend/src/CentralCommand.MockApi
 dotnet run --urls http://localhost:5001
 
 # Run tests
@@ -60,7 +65,7 @@ dotnet clean
 ### React Frontend
 
 ```bash
-cd central-command-react
+cd frontend/central-command-web
 
 # Development
 npm install          # Install dependencies
