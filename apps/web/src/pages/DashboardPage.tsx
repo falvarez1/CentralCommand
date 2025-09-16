@@ -27,7 +27,8 @@ export const DashboardPage: React.FC = () => {
   const { portals, filteredPortals, searchTerm, selectedCategory, setSearchTerm, setSelectedCategory } = usePortalFilters()
   const { toggleFavorite } = usePortalStore()
   const { incidents } = useIncidentStore()
-  const { viewMode, setViewMode } = useUIStore()
+  const { currentView, setView } = useUIStore()
+  const viewMode = currentView === 'dashboard' ? ViewMode.GRID : currentView === 'list' ? ViewMode.LIST : ViewMode.GRID
   const { showWarning, showSuccess, showInfo } = useNotificationContext()
   const { openCommandPalette } = useCommandPalette()
   const [addPortalOpen, setAddPortalOpen] = useState(false)
@@ -39,7 +40,7 @@ export const DashboardPage: React.FC = () => {
 
   // Check for degraded or down portals
   const problematicPortals = portals.filter(
-    p => p.status === PortalStatus.DEGRADED || p.status === PortalStatus.OUTAGE
+    p => p.status === PortalStatus.Degraded || p.status === PortalStatus.Outage
   )
 
   // Keyboard shortcuts
@@ -58,20 +59,20 @@ export const DashboardPage: React.FC = () => {
       // Cmd/Ctrl + G for grid view
       if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
         e.preventDefault()
-        setViewMode(ViewMode.GRID)
+        setView('grid')
         showInfo('View Changed', 'Switched to grid view')
       }
       // Cmd/Ctrl + L for list view
       if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
         e.preventDefault()
-        setViewMode(ViewMode.LIST)
+        setView('list')
         showInfo('View Changed', 'Switched to list view')
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [openCommandPalette, setViewMode, showInfo])
+  }, [openCommandPalette, setView, showInfo])
 
   // Show notifications for critical issues
   useEffect(() => {
@@ -118,7 +119,7 @@ export const DashboardPage: React.FC = () => {
         portals={filteredPortals}
         viewMode={viewMode}
         selectedCategory={selectedCategory}
-        onViewModeChange={setViewMode}
+        onViewModeChange={(mode) => setView(mode === ViewMode.GRID ? 'grid' : 'list')}
         onCategoryChange={setSelectedCategory}
       >
         <div className="space-y-6">

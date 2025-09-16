@@ -137,10 +137,10 @@ export const PortalListItem: React.FC<PortalListItemProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn('w-8 h-8', portal.favorited && 'text-yellow-500')}
+                className={cn('w-8 h-8', portal.isFavorite && 'text-yellow-500')}
                 onClick={handleFavoriteClick}
               >
-                <Star className={cn('w-4 h-4', portal.favorited && 'fill-current')} />
+                <Star className={cn('w-4 h-4', portal.isFavorite && 'fill-current')} />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -230,10 +230,10 @@ export const PortalListItem: React.FC<PortalListItemProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className={cn('w-8 h-8', portal.favorited && 'text-yellow-500')}
+              className={cn('w-8 h-8', portal.isFavorite && 'text-yellow-500')}
               onClick={handleFavoriteClick}
             >
-              <Star className={cn('w-4 h-4', portal.favorited && 'fill-current')} />
+              <Star className={cn('w-4 h-4', portal.isFavorite && 'fill-current')} />
             </Button>
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Shield className="w-5 h-5 text-primary" />

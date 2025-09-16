@@ -58,7 +58,7 @@ export const PortalList: React.FC<PortalListProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold truncate">{portal.name}</h3>
-                {portal.favorited && (
+                {portal.isFavorite && (
                   <Heart className="h-3 w-3 fill-current text-red-500" />
                 )}
               </div>
@@ -103,7 +103,7 @@ export const PortalList: React.FC<PortalListProps> = ({
                 onFavoriteClick?.(portal.id)
               }}
             >
-              <Heart className={`h-4 w-4 ${portal.favorited ? 'fill-current text-red-500' : ''}`} />
+              <Heart className={`h-4 w-4 ${portal.isFavorite ? 'fill-current text-red-500' : ''}`} />
             </Button>
             <Button
               variant="ghost"
@@ -147,7 +147,7 @@ export const PortalList: React.FC<PortalListProps> = ({
                   onFavoriteClick?.(portal.id)
                 }}>
                   <Heart className="h-4 w-4 mr-2" />
-                  {portal.favorited ? 'Remove from Favorites' : 'Add to Favorites'}
+                  {portal.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

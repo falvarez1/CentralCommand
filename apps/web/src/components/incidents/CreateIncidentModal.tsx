@@ -22,14 +22,14 @@ import {
   IncidentStatus,
   CreateIncidentInput
 } from '../../types/incident.types';
-import { useIncidentStore } from '../../stores/useIncidentStore';
-import { usePortalStore } from '../../stores/usePortalStore';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
 interface CreateIncidentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCreateIncident?: (incident: CreateIncidentInput) => void;
+  portals?: Array<{ id: string; name: string; }>;
 }
 
 // Form validation schema
@@ -47,16 +47,15 @@ const createIncidentSchema = z.object({
 
 export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
   isOpen,
-  onClose
+  onClose,
+  onCreateIncident,
+  portals = []
 }) => {
-  const { createIncident } = useIncidentStore();
-  const { portals } = usePortalStore();
-
   const [formData, setFormData] = useState<Partial<CreateIncidentInput>>({
     title: '',
     description: '',
     severity: IncidentSeverity.Medium,
-    type: IncidentType.SERVICE,
+    type: IncidentType.Service,
     status: IncidentStatus.Open,
     affectedPortals: [],
     affectedServices: [],
@@ -80,10 +79,12 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
       const validatedData = createIncidentSchema.parse(formData);
 
       // Create the incident
-      const newIncident = createIncident(validatedData as CreateIncidentInput);
+      if (onCreateIncident) {
+        onCreateIncident(validatedData as CreateIncidentInput);
+      }
 
       toast.success('Incident created successfully', {
-        description: `${newIncident.title} has been reported`
+        description: `${validatedData.title} has been reported`
       });
 
       onClose();
@@ -253,14 +254,15 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={IncidentType.OUTAGE}>Outage</SelectItem>
-                  <SelectItem value={IncidentType.PERFORMANCE}>Performance</SelectItem>
-                  <SelectItem value={IncidentType.SECURITY}>Security</SelectItem>
-                  <SelectItem value={IncidentType.DATABASE}>Database</SelectItem>
-                  <SelectItem value={IncidentType.SERVICE}>Service</SelectItem>
-                  <SelectItem value={IncidentType.INFRASTRUCTURE}>Infrastructure</SelectItem>
-                  <SelectItem value={IncidentType.NETWORK}>Network</SelectItem>
-                  <SelectItem value={IncidentType.MAINTENANCE}>Maintenance</SelectItem>
+                  <SelectItem value={IncidentType.Outage}>Outage</SelectItem>
+                  <SelectItem value={IncidentType.Performance}>Performance</SelectItem>
+                  <SelectItem value={IncidentType.Security}>Security</SelectItem>
+                  <SelectItem value={IncidentType.Database}>Database</SelectItem>
+                  <SelectItem value={IncidentType.Service}>Service</SelectItem>
+                  <SelectItem value={IncidentType.Infrastructure}>Infrastructure</SelectItem>
+                  <SelectItem value={IncidentType.Network}>Network</SelectItem>
+                  <SelectItem value={IncidentType.Maintenance}>Maintenance</SelectItem>
+                  <SelectItem value={IncidentType.Configuration}>Configuration</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -270,21 +272,25 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
           <div className="space-y-2">
             <Label>Affected Portals *</Label>
             <div className="border rounded-lg p-3 space-y-2 max-h-32 overflow-y-auto">
-              {portals.map(portal => (
-                <div key={portal.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`portal-${portal.id}`}
-                    checked={formData.affectedPortals?.includes(portal.id) || false}
-                    onCheckedChange={() => togglePortal(portal.id)}
-                  />
-                  <label
-                    htmlFor={`portal-${portal.id}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    {portal.name}
-                  </label>
-                </div>
-              ))}
+              {portals.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No portals available</p>
+              ) : (
+                portals.map(portal => (
+                  <div key={portal.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`portal-${portal.id}`}
+                      checked={formData.affectedPortals?.includes(portal.id) || false}
+                      onCheckedChange={() => togglePortal(portal.id)}
+                    />
+                    <label
+                      htmlFor={`portal-${portal.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {portal.name}
+                    </label>
+                  </div>
+                ))
+              )}
             </div>
             {errors.affectedPortals && (
               <p className="text-xs text-red-500 flex items-center gap-1">

@@ -82,7 +82,7 @@ export const PortalCard: React.FC<PortalCardProps> = ({
               className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={handleFavoriteClick}
             >
-              <Heart className={`h-4 w-4 ${portal.favorited ? 'fill-current text-red-500' : ''}`} />
+              <Heart className={`h-4 w-4 ${portal.isFavorite ? 'fill-current text-red-500' : ''}`} />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -106,7 +106,7 @@ export const PortalCard: React.FC<PortalCardProps> = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleFavoriteClick}>
                   <Heart className="h-4 w-4 mr-2" />
-                  {portal.favorited ? 'Remove from Favorites' : 'Add to Favorites'}
+                  {portal.isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

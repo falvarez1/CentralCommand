@@ -202,7 +202,7 @@ export const IncidentsPage = () => {
         )}
 
         <CreateIncidentModal
-          open={createModalOpen}
+          isOpen={createModalOpen}
           onClose={() => setCreateModalOpen(false)}
         />
       </div>

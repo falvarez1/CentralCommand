@@ -15,7 +15,7 @@ export const PortalDetailsPage = () => {
   const navigate = useNavigate()
   const { portals, toggleFavorite } = usePortalStore()
 
-  const portal = portals.find(p => p.id === Number(id))
+  const portal = portals.find(p => p.id === id)
 
   if (!portal) {
     return (
@@ -32,20 +32,20 @@ export const PortalDetailsPage = () => {
 
   const getStatusColor = (status: PortalStatus) => {
     switch (status) {
-      case PortalStatus.OPERATIONAL: return 'bg-green-500'
-      case PortalStatus.DEGRADED: return 'bg-yellow-500'
-      case PortalStatus.MAINTENANCE: return 'bg-orange-500'
-      case PortalStatus.OUTAGE: return 'bg-red-500'
+      case PortalStatus.Operational: return 'bg-green-500'
+      case PortalStatus.Degraded: return 'bg-yellow-500'
+      case PortalStatus.Maintenance: return 'bg-orange-500'
+      case PortalStatus.Outage: return 'bg-red-500'
       default: return 'bg-gray-500'
     }
   }
 
   const getStatusBadge = (status: PortalStatus) => {
     const colors = {
-      [PortalStatus.OPERATIONAL]: 'default',
-      [PortalStatus.DEGRADED]: 'warning',
-      [PortalStatus.MAINTENANCE]: 'secondary',
-      [PortalStatus.OUTAGE]: 'destructive'
+      [PortalStatus.Operational]: 'default',
+      [PortalStatus.Degraded]: 'warning',
+      [PortalStatus.Maintenance]: 'secondary',
+      [PortalStatus.Outage]: 'destructive'
     }
     return <Badge variant={colors[status] as any}>{status}</Badge>
   }
@@ -75,7 +75,7 @@ export const PortalDetailsPage = () => {
               size="icon"
               onClick={() => toggleFavorite(portal.id)}
             >
-              <Heart className={`h-4 w-4 ${portal.favorited ? 'fill-current text-red-500' : ''}`} />
+              <Heart className={`h-4 w-4 ${portal.isFavorite ? 'fill-current text-red-500' : ''}`} />
             </Button>
             <Button variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -109,15 +109,15 @@ export const PortalDetailsPage = () => {
               </div>
               <div className="space-y-2">
                 <span className="text-sm text-muted-foreground">Response Time</span>
-                <p className="text-2xl font-bold">{portal.responseTime}ms</p>
+                <p className="text-2xl font-bold">{portal.responseTime || 0}ms</p>
               </div>
               <div className="space-y-2">
                 <span className="text-sm text-muted-foreground">Uptime</span>
-                <p className="text-2xl font-bold">{portal.uptime}%</p>
+                <p className="text-2xl font-bold">{portal.uptime || 0}%</p>
               </div>
               <div className="space-y-2">
                 <span className="text-sm text-muted-foreground">Last Checked</span>
-                <p className="text-sm">{new Date(portal.lastChecked).toLocaleString()}</p>
+                <p className="text-sm">{portal.lastChecked ? new Date(portal.lastChecked).toLocaleString() : 'Never'}</p>
               </div>
             </div>
           </CardContent>
@@ -142,26 +142,26 @@ export const PortalDetailsPage = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>CPU Usage</span>
-                    <span className="font-mono">{portal.cpu}%</span>
+                    <span className="font-mono">{portal.cpu || 0}%</span>
                   </div>
-                  <Progress value={portal.cpu} className="h-2" />
+                  <Progress value={portal.cpu || 0} className="h-2" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Memory Usage</span>
-                    <span className="font-mono">{portal.memory}%</span>
+                    <span className="font-mono">{portal.memory || 0}%</span>
                   </div>
-                  <Progress value={portal.memory} className="h-2" />
+                  <Progress value={portal.memory || 0} className="h-2" />
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <span className="text-sm text-muted-foreground">Total Requests</span>
-                    <p className="text-2xl font-bold">{portal.requests.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">{(portal.requests || 0).toLocaleString()}</p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-sm text-muted-foreground">Error Rate</span>
-                    <p className="text-2xl font-bold text-red-500">{portal.errors}</p>
+                    <p className="text-2xl font-bold text-red-500">{portal.errors || 0}</p>
                   </div>
                 </div>
               </CardContent>
@@ -181,7 +181,7 @@ export const PortalDetailsPage = () => {
                     <div className="space-y-1">
                       <p className="text-sm font-medium">CPU Cores</p>
                       <p className="text-2xl font-bold">4 vCPUs</p>
-                      <p className="text-xs text-muted-foreground">{portal.cpu}% utilized</p>
+                      <p className="text-xs text-muted-foreground">{portal.cpu || 0}% utilized</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -189,7 +189,7 @@ export const PortalDetailsPage = () => {
                     <div className="space-y-1">
                       <p className="text-sm font-medium">Memory</p>
                       <p className="text-2xl font-bold">16 GB</p>
-                      <p className="text-xs text-muted-foreground">{portal.memory}% utilized</p>
+                      <p className="text-xs text-muted-foreground">{portal.memory || 0}% utilized</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -294,7 +294,7 @@ export const PortalDetailsPage = () => {
             <div className="space-y-2">
               <span className="text-sm text-muted-foreground">Tags</span>
               <div className="flex flex-wrap gap-2">
-                {portal.tags.map(tag => (
+                {(portal.tags || []).map(tag => (
                   <Badge key={tag} variant="secondary">{tag}</Badge>
                 ))}
               </div>

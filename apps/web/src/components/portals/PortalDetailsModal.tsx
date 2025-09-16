@@ -21,8 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Portal,
   PortalStatus,
-  PortalHealthCheck,
-  PortalChartData
+  PortalHealthCheck
 } from '@/types/portal.types';
 import { cn } from '@/lib/utils';
 import {
@@ -55,7 +54,7 @@ interface PortalDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   healthChecks?: PortalHealthCheck[];
-  chartData?: PortalChartData[];
+  chartData?: any[];
   incidents?: any[]; // Would import from incident types
 }
 
@@ -380,17 +379,17 @@ export const PortalDetailsModal: React.FC<PortalDetailsModalProps> = ({
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Environment</dt>
-                        <dd className="font-medium mt-1 capitalize">{portal.config?.environment || 'production'}</dd>
+                        <dd className="font-medium mt-1 capitalize">{portal.environment}</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Priority</dt>
-                        <dd className="font-medium mt-1 capitalize">{portal.config?.priority || 'medium'}</dd>
+                        <dd className="font-medium mt-1 capitalize">{portal.priority}</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Authentication</dt>
                         <dd className="font-medium mt-1 flex items-center gap-1">
                           <Lock className="w-3 h-3" />
-                          {portal.config?.authType?.toUpperCase() || 'SAML'}
+                          {portal.authType}
                         </dd>
                       </div>
                       <div>
@@ -408,7 +407,7 @@ export const PortalDetailsModal: React.FC<PortalDetailsModalProps> = ({
                       <div className="col-span-2">
                         <dt className="text-muted-foreground">Last Updated</dt>
                         <dd className="font-medium mt-1">
-                          {new Date(portal.metrics.lastChecked).toLocaleString()}
+                          {new Date(portal.lastChecked).toLocaleString()}
                         </dd>
                       </div>
                     </dl>
@@ -530,19 +529,19 @@ export const PortalDetailsModal: React.FC<PortalDetailsModalProps> = ({
                     <dl className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <dt className="text-muted-foreground">Check Interval</dt>
-                        <dd className="font-medium mt-1">{portal.config?.checkInterval || 60} seconds</dd>
+                        <dd className="font-medium mt-1">{portal.config?.healthCheckInterval || 60} seconds</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Timeout</dt>
-                        <dd className="font-medium mt-1">{portal.config?.timeout || 10} seconds</dd>
+                        <dd className="font-medium mt-1">{portal.config?.timeout || 10000} ms</dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">Retry Attempts</dt>
                         <dd className="font-medium mt-1">{portal.config?.retryAttempts || 3}</dd>
                       </div>
                       <div>
-                        <dt className="text-muted-foreground">Alert Threshold</dt>
-                        <dd className="font-medium mt-1">{portal.config?.alertThreshold || 95}%</dd>
+                        <dt className="text-muted-foreground">Monitoring Enabled</dt>
+                        <dd className="font-medium mt-1">{portal.config?.enableMonitoring ? 'Yes' : 'No'}</dd>
                       </div>
                     </dl>
                   </CardContent>
@@ -610,10 +609,10 @@ export const PortalDetailsModal: React.FC<PortalDetailsModalProps> = ({
                       </div>
                       <div>
                         <dt className="text-muted-foreground mb-1">Health Check Endpoint</dt>
-                        <dd className="font-mono text-xs bg-muted p-2 rounded">{portal.url}/health</dd>
+                        <dd className="font-mono text-xs bg-muted p-2 rounded">{portal.config?.healthCheckEndpoint || `${portal.url}/health`}</dd>
                       </div>
                       <div>
-                        <dt className="text-muted-foreground mb-1">Monitoring Tags</dt>
+                        <dt className="text-muted-foreground mb-1">Tags</dt>
                         <dd className="flex flex-wrap gap-2 mt-2">
                           {portal.tags?.map((tag) => (
                             <Badge key={tag} variant="secondary">{tag}</Badge>

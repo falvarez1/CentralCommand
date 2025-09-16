@@ -41,8 +41,6 @@ import {
   X
 } from 'lucide-react';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentType } from '../../types/incident.types';
-import { useIncidentStore } from '../../stores/useIncidentStore';
-import { usePortalStore } from '../../stores/usePortalStore';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
@@ -50,6 +48,14 @@ interface IncidentDetailsModalProps {
   incident: Incident;
   isOpen: boolean;
   onClose: () => void;
+  onUpdateIncident?: (incident: Incident) => void;
+  onAcknowledgeIncident?: (incidentId: string) => void;
+  onResolveIncident?: (incidentId: string, resolution: string, rootCause?: string) => void;
+  onEscalateIncident?: (incidentId: string) => void;
+  onReopenIncident?: (incidentId: string) => void;
+  onAddTimelineEntry?: (incidentId: string, action: string, description: string) => void;
+  relatedIncidents?: Incident[];
+  affectedPortalDetails?: Array<{ id: string; name: string; url: string; status: string; }>;
 }
 
 const severityConfig = {
@@ -65,14 +71,14 @@ const severityConfig = {
     color: 'text-orange-500',
     bgColor: 'bg-orange-50 dark:bg-orange-950',
     borderColor: 'border-orange-200 dark:border-orange-800',
-    badge: 'warning' as const
+    badge: 'destructive' as const
   },
   [IncidentSeverity.Medium]: {
     icon: AlertTriangle,
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-50 dark:bg-yellow-950',
     borderColor: 'border-yellow-200 dark:border-yellow-800',
-    badge: 'warning' as const
+    badge: 'secondary' as const
   },
   [IncidentSeverity.Low]: {
     icon: Info,
@@ -84,40 +90,38 @@ const severityConfig = {
 };
 
 const typeIcons = {
-  [IncidentType.OUTAGE]: Activity,
-  [IncidentType.PERFORMANCE]: TrendingUp,
-  [IncidentType.MAINTENANCE]: Clock,
-  [IncidentType.SECURITY]: Lock,
-  [IncidentType.DATABASE]: Database,
-  [IncidentType.SERVICE]: Server,
-  [IncidentType.INFRASTRUCTURE]: Shield,
-  [IncidentType.NETWORK]: Wifi
+  [IncidentType.Outage]: Activity,
+  [IncidentType.Performance]: TrendingUp,
+  [IncidentType.Maintenance]: Clock,
+  [IncidentType.Security]: Lock,
+  [IncidentType.Database]: Database,
+  [IncidentType.Service]: Server,
+  [IncidentType.Infrastructure]: Shield,
+  [IncidentType.Network]: Wifi,
+  [IncidentType.Configuration]: Server
 };
 
 const statusConfig = {
   [IncidentStatus.Open]: { label: 'Open', color: 'text-red-600 dark:text-red-400' },
   [IncidentStatus.InProgress]: { label: 'In Progress', color: 'text-yellow-600 dark:text-yellow-400' },
-  [IncidentStatus.Acknowledged]: { label: 'Acknowledged', color: 'text-blue-600 dark:text-blue-400' },
   [IncidentStatus.Resolved]: { label: 'Resolved', color: 'text-green-600 dark:text-green-400' },
-  [IncidentStatus.Closed]: { label: 'Closed', color: 'text-gray-600 dark:text-gray-400' }
+  [IncidentStatus.Closed]: { label: 'Closed', color: 'text-gray-600 dark:text-gray-400' },
+  [IncidentStatus.Acknowledged]: { label: 'Acknowledged', color: 'text-blue-600 dark:text-blue-400' }
 };
 
 export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
   incident,
   isOpen,
-  onClose
+  onClose,
+  onUpdateIncident,
+  onAcknowledgeIncident,
+  onResolveIncident,
+  onEscalateIncident,
+  onReopenIncident,
+  onAddTimelineEntry,
+  relatedIncidents = [],
+  affectedPortalDetails = []
 }) => {
-  const {
-    updateIncident,
-    acknowledgeIncident,
-    resolveIncident,
-    escalateIncident,
-    reopenIncident,
-    addTimelineEntry,
-    incidents
-  } = useIncidentStore();
-  const { portals } = usePortalStore();
-
   const [activeTab, setActiveTab] = useState('overview');
   const [comment, setComment] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
@@ -129,25 +133,17 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
   const TypeIcon = typeIcons[incident.type];
   const statusInfo = statusConfig[incident.status];
 
-  const relatedIncidents = incidents.filter(i =>
-    incident.relatedIncidents.includes(i.id)
-  );
-
-  const affectedPortalDetails = portals.filter(p =>
-    incident.affectedPortals.includes(p.id)
-  );
-
   const handleAddComment = () => {
-    if (comment.trim()) {
-      addTimelineEntry(incident.id, 'Comment added', comment);
+    if (comment.trim() && onAddTimelineEntry) {
+      onAddTimelineEntry(incident.id, 'Comment added', comment);
       setComment('');
       toast.success('Comment added to timeline');
     }
   };
 
   const handleResolve = () => {
-    if (resolutionNotes.trim()) {
-      resolveIncident(incident.id, resolutionNotes, rootCauseNotes || undefined);
+    if (resolutionNotes.trim() && onResolveIncident) {
+      onResolveIncident(incident.id, resolutionNotes, rootCauseNotes || undefined);
       setIsEditingResolution(false);
       setResolutionNotes('');
       setRootCauseNotes('');
@@ -160,22 +156,28 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
   };
 
   const handleAcknowledge = () => {
-    acknowledgeIncident(incident.id);
-    toast.success('Incident acknowledged');
+    if (onAcknowledgeIncident) {
+      onAcknowledgeIncident(incident.id);
+      toast.success('Incident acknowledged');
+    }
   };
 
   const handleEscalate = () => {
-    escalateIncident(incident.id);
-    toast.warning('Incident escalated', {
-      description: `Severity increased for: ${incident.title}`
-    });
+    if (onEscalateIncident) {
+      onEscalateIncident(incident.id);
+      toast.warning('Incident escalated', {
+        description: `Severity increased for: ${incident.title}`
+      });
+    }
   };
 
   const handleReopen = () => {
-    reopenIncident(incident.id);
-    toast.info('Incident reopened', {
-      description: incident.title
-    });
+    if (onReopenIncident) {
+      onReopenIncident(incident.id);
+      toast.info('Incident reopened', {
+        description: incident.title
+      });
+    }
   };
 
   return (
@@ -345,7 +347,7 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium">{entry.action}</p>
+                          <p className="text-sm font-medium">{entry.eventType}</p>
                           <p className="text-sm text-muted-foreground mt-1">
                             {entry.description}
                           </p>
@@ -392,7 +394,7 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
                             <p className="font-medium">{portal.name}</p>
                             <p className="text-sm text-muted-foreground">{portal.url}</p>
                           </div>
-                          <Badge variant={portal.status === 'operational' ? 'success' : 'destructive'}>
+                          <Badge variant={portal.status === 'Operational' ? 'default' : 'destructive'}>
                             {portal.status}
                           </Badge>
                         </div>
@@ -436,13 +438,11 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
                       {relatedIncidents.map(related => (
                         <div key={related.id} className="flex items-center justify-between p-3 bg-accent rounded-lg">
                           <div className="flex items-center gap-3">
-                            {severityIcons[related.severity] && (
-                              <div className={severityColors[related.severity]}>
-                                {React.createElement(severityIcons[related.severity], {
-                                  className: 'w-4 h-4'
-                                })}
-                              </div>
-                            )}
+                            <div className={severityConfig[related.severity].color}>
+                              {React.createElement(severityConfig[related.severity].icon, {
+                                className: 'w-4 h-4'
+                              })}
+                            </div>
                             <div>
                               <p className="font-medium text-sm">{related.title}</p>
                               <p className="text-xs text-muted-foreground">
