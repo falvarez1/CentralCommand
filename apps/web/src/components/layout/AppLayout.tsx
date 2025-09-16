@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { usePortalStore } from '@/stores/usePortalStore';
 import { Portal } from '@/types';
 
 interface AppLayoutProps {
@@ -19,7 +20,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [favorites, setFavorites] = useState<Portal[]>([]);
+  const { portals } = usePortalStore();
+
+  // Get only favorited portals
+  const favorites = portals.filter(p => p.isFavorite);
 
   // Auto-hide sidebar on mobile
   useEffect(() => {
@@ -36,11 +40,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } else {
       setIsSidebarCollapsed(!isSidebarCollapsed);
     }
-  };
-
-  const handleToggleFavorite = (portalId: number) => {
-    // This will be connected to global state management later
-    console.log('Toggle favorite:', portalId);
   };
 
   return (

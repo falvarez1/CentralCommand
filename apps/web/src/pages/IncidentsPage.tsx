@@ -49,7 +49,7 @@ export const IncidentsPage = () => {
     switch (status) {
       case IncidentStatus.Open:
         return <Clock className="h-4 w-4 text-blue-500" />
-      case IncidentStatus.IN_PROGRESS:
+      case IncidentStatus.InProgress:
         return <Clock className="h-4 w-4 text-yellow-500" />
       case IncidentStatus.Resolved:
         return <CheckCircle2 className="h-4 w-4 text-green-500" />

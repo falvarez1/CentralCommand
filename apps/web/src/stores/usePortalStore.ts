@@ -25,27 +25,27 @@ import {
  * Mock data generator for portals
  */
 const generateMockPortals = (): Portal[] => {
-  const categories = Object.values(PortalCategory).filter(c => c !== PortalCategory.ALL);
+  const categories = Object.values(PortalCategory).filter(c => c !== PortalCategory.All);
   const statuses = Object.values(PortalStatus);
   const environments = Object.values(PortalEnvironment);
   const priorities = Object.values(PortalPriority);
 
   const portalNames = [
-    { name: 'Grafana Dashboard', category: PortalCategory.MONITORING, url: 'https://grafana.internal' },
-    { name: 'Prometheus Metrics', category: PortalCategory.MONITORING, url: 'https://prometheus.internal' },
-    { name: 'Kibana Logs', category: PortalCategory.ANALYTICS, url: 'https://kibana.internal' },
-    { name: 'Jenkins CI/CD', category: PortalCategory.DEVELOPMENT, url: 'https://jenkins.internal' },
-    { name: 'GitLab', category: PortalCategory.DEVELOPMENT, url: 'https://gitlab.internal' },
-    { name: 'Kubernetes Dashboard', category: PortalCategory.INFRASTRUCTURE, url: 'https://k8s.internal' },
-    { name: 'PostgreSQL Admin', category: PortalCategory.DATABASES, url: 'https://pgadmin.internal' },
-    { name: 'MongoDB Atlas', category: PortalCategory.DATABASES, url: 'https://mongodb.internal' },
-    { name: 'SonarQube', category: PortalCategory.SECURITY, url: 'https://sonarqube.internal' },
-    { name: 'Vault Secrets', category: PortalCategory.SECURITY, url: 'https://vault.internal' },
-    { name: 'Confluence Wiki', category: PortalCategory.BUSINESS, url: 'https://confluence.internal' },
-    { name: 'JIRA Board', category: PortalCategory.BUSINESS, url: 'https://jira.internal' },
-    { name: 'Slack Gateway', category: PortalCategory.COMMUNICATION, url: 'https://slack-gateway.internal' },
-    { name: 'Email Service', category: PortalCategory.SERVICES, url: 'https://email.internal' },
-    { name: 'API Gateway', category: PortalCategory.SERVICES, url: 'https://api-gateway.internal' }
+    { name: 'Grafana Dashboard', category: PortalCategory.Operations, url: 'https://grafana.internal' },
+    { name: 'Prometheus Metrics', category: PortalCategory.Operations, url: 'https://prometheus.internal' },
+    { name: 'Kibana Logs', category: PortalCategory.Security, url: 'https://kibana.internal' },
+    { name: 'Jenkins CI/CD', category: PortalCategory.Engineering, url: 'https://jenkins.internal' },
+    { name: 'GitLab', category: PortalCategory.Engineering, url: 'https://gitlab.internal' },
+    { name: 'Kubernetes Dashboard', category: PortalCategory.Engineering, url: 'https://k8s.internal' },
+    { name: 'PostgreSQL Admin', category: PortalCategory.Engineering, url: 'https://pgadmin.internal' },
+    { name: 'MongoDB Atlas', category: PortalCategory.Engineering, url: 'https://mongodb.internal' },
+    { name: 'SonarQube', category: PortalCategory.Engineering, url: 'https://sonarqube.internal' },
+    { name: 'Vault Secrets', category: PortalCategory.Security, url: 'https://vault.internal' },
+    { name: 'Confluence Wiki', category: PortalCategory.Business, url: 'https://confluence.internal' },
+    { name: 'JIRA Board', category: PortalCategory.Business, url: 'https://jira.internal' },
+    { name: 'Slack Gateway', category: PortalCategory.Support, url: 'https://slack-gateway.internal' },
+    { name: 'Email Service', category: PortalCategory.Support, url: 'https://email.internal' },
+    { name: 'API Gateway', category: PortalCategory.Operations, url: 'https://api-gateway.internal' }
   ];
 
   return portalNames.map((portal, index) => ({
@@ -175,7 +175,7 @@ export const usePortalStore = create<PortalState>()(
             }
 
             // Category filter from filter object
-            if (filter.category && filter.category !== PortalCategory.ALL && portal.category !== filter.category) {
+            if (filter.category && filter.category !== PortalCategory.All && portal.category !== filter.category) {
               return false;
             }
 

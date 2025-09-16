@@ -41,7 +41,7 @@ export const usePortalFilters = () => {
       }
 
       // Category filter from filter object
-      if (filter.category && filter.category !== PortalCategory.ALL && portal.category !== filter.category) {
+      if (filter.category && filter.category !== PortalCategory.All && portal.category !== filter.category) {
         return false;
       }
 
@@ -107,10 +107,10 @@ export const usePortalFilters = () => {
   const portalStats = useMemo(() => {
     const stats: PortalStats = {
       total: filteredPortals.length,
-      operational: filteredPortals.filter(p => p.status === PortalStatus.OPERATIONAL).length,
-      degraded: filteredPortals.filter(p => p.status === PortalStatus.DEGRADED).length,
-      maintenance: filteredPortals.filter(p => p.status === PortalStatus.MAINTENANCE).length,
-      outage: filteredPortals.filter(p => p.status === PortalStatus.OUTAGE).length,
+      operational: filteredPortals.filter(p => p.status === PortalStatus.Operational).length,
+      degraded: filteredPortals.filter(p => p.status === PortalStatus.Degraded).length,
+      maintenance: filteredPortals.filter(p => p.status === PortalStatus.Maintenance).length,
+      outage: filteredPortals.filter(p => p.status === PortalStatus.Outage).length,
       byCategory: {} as Record<PortalCategory, number>,
       byEnvironment: {} as Record<PortalEnvironment, number>,
       byPriority: {} as Record<PortalPriority, number>,

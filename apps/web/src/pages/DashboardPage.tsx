@@ -117,6 +117,7 @@ export const DashboardPage: React.FC = () => {
     <AppLayout>
       <MainContent
         portals={filteredPortals}
+        allPortals={portals}
         viewMode={viewMode}
         selectedCategory={selectedCategory}
         onViewModeChange={(mode) => setView(mode === ViewMode.GRID ? 'grid' : 'list')}

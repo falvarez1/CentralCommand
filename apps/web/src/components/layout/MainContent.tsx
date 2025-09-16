@@ -29,6 +29,7 @@ import { ViewMode, PortalCategory, PortalStatus } from '@/types';
 interface MainContentProps {
   children: React.ReactNode;
   portals?: Portal[];
+  allPortals?: Portal[];  // All portals for category counts
   systemStats?: SystemStats;
   onCategoryChange?: (category: string) => void;
   onViewModeChange?: (mode: ViewMode) => void;
@@ -50,6 +51,7 @@ interface StatCard {
 export const MainContent: React.FC<MainContentProps> = ({
   children,
   portals = [],
+  allPortals,
   systemStats,
   onCategoryChange,
   onViewModeChange,
@@ -128,13 +130,16 @@ export const MainContent: React.FC<MainContentProps> = ({
     }
   ];
 
+  // Use allPortals for counts if provided, otherwise fall back to portals
+  const portalSource = allPortals || portals;
+
   const categories = [
-    { id: 'all', label: 'All Portals', count: portals.length },
-    { id: PortalCategory.BUSINESS, label: 'Business', count: portals.filter(p => p.category === PortalCategory.BUSINESS).length },
-    { id: PortalCategory.ENGINEERING, label: 'Engineering', count: portals.filter(p => p.category === PortalCategory.ENGINEERING).length },
-    { id: PortalCategory.OPERATIONS, label: 'Operations', count: portals.filter(p => p.category === PortalCategory.OPERATIONS).length },
-    { id: PortalCategory.SECURITY, label: 'Security', count: portals.filter(p => p.category === PortalCategory.SECURITY).length },
-    { id: PortalCategory.SUPPORT, label: 'Support', count: portals.filter(p => p.category === PortalCategory.SUPPORT).length }
+    { id: 'all', label: 'All Portals', count: portalSource.length },
+    { id: PortalCategory.Business, label: 'Business', count: portalSource.filter(p => p.category === PortalCategory.Business).length },
+    { id: PortalCategory.Engineering, label: 'Engineering', count: portalSource.filter(p => p.category === PortalCategory.Engineering).length },
+    { id: PortalCategory.Operations, label: 'Operations', count: portalSource.filter(p => p.category === PortalCategory.Operations).length },
+    { id: PortalCategory.Security, label: 'Security', count: portalSource.filter(p => p.category === PortalCategory.Security).length },
+    { id: PortalCategory.Support, label: 'Support', count: portalSource.filter(p => p.category === PortalCategory.Support).length }
   ];
 
   return (
@@ -208,15 +213,15 @@ export const MainContent: React.FC<MainContentProps> = ({
                 value={category.id}
                 className="relative data-[state=active]:bg-background"
               >
-                <span>{category.label}</span>
-                {category.count > 0 && (
+                <>
+                  <span>{category.label}</span>
                   <Badge
                     variant="secondary"
                     className="ml-2 h-5 px-1.5 text-xs"
                   >
                     {category.count}
                   </Badge>
-                )}
+                </>
               </TabsTrigger>
             ))}
           </TabsList>
