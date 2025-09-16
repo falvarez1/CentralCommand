@@ -240,8 +240,9 @@ builder.Services.AddSignalR(options =>
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>("database")
-    .AddRedis(builder.Configuration.GetConnectionString("Redis") ?? string.Empty, name: "redis");
+    .AddDbContextCheck<AppDbContext>("database");
+    // TODO: Add Redis health check when Redis package is installed
+    // .AddRedis(builder.Configuration.GetConnectionString("Redis") ?? string.Empty, name: "redis");
 
 // Register application services
 builder.Services.AddScoped<IPortalService, PortalService>();
@@ -277,8 +278,6 @@ builder.Services.AddVersionedApiExplorer(options =>
     options.SubstituteApiVersionInUrl = true;
 });
 
-// Configure AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
 
 // Configure HttpClient
 builder.Services.AddHttpClient<IMetricsCollector, MetricsCollector>()
@@ -342,34 +341,39 @@ var apiGroup = app.MapGroup("/api/v{version:apiVersion}")
     .WithOpenApi();
 
 // Portal endpoints
-apiGroup.MapGroup("/portals")
-    .MapPortalEndpoints()
-    .WithTags("Portals")
-    .RequireAuthorization("PortalRead");
+// TODO: Uncomment when MapPortalEndpoints is implemented
+// apiGroup.MapGroup("/portals")
+//     .MapPortalEndpoints()
+//     .WithTags("Portals")
+//     .RequireAuthorization("PortalRead");
 
 // Incident endpoints
-apiGroup.MapGroup("/incidents")
-    .MapIncidentEndpoints()
-    .WithTags("Incidents")
-    .RequireAuthorization("IncidentManage");
+// TODO: Uncomment when MapIncidentEndpoints is implemented
+// apiGroup.MapGroup("/incidents")
+//     .MapIncidentEndpoints()
+//     .WithTags("Incidents")
+//     .RequireAuthorization("IncidentManage");
 
 // Statistics endpoints
-apiGroup.MapGroup("/statistics")
-    .MapStatisticsEndpoints()
-    .WithTags("Statistics")
-    .RequireAuthorization("PortalRead");
+// TODO: Uncomment when MapStatisticsEndpoints is implemented
+// apiGroup.MapGroup("/statistics")
+//     .MapStatisticsEndpoints()
+//     .WithTags("Statistics")
+//     .RequireAuthorization("PortalRead");
 
 // Command palette endpoints
-apiGroup.MapGroup("/commands")
-    .MapCommandEndpoints()
-    .WithTags("Commands")
-    .RequireAuthorization();
+// TODO: Uncomment when MapCommandEndpoints is implemented
+// apiGroup.MapGroup("/commands")
+//     .MapCommandEndpoints()
+//     .WithTags("Commands")
+//     .RequireAuthorization();
 
 // User preference endpoints
-apiGroup.MapGroup("/users/me")
-    .MapUserEndpoints()
-    .WithTags("User")
-    .RequireAuthorization();
+// TODO: Uncomment when MapUserEndpoints is implemented
+// apiGroup.MapGroup("/users/me")
+//     .MapUserEndpoints()
+//     .WithTags("User")
+//     .RequireAuthorization();
 
 // Map SignalR hubs
 app.MapHub<MetricsHub>("/hubs/metrics");

@@ -1,5 +1,4 @@
 using CentralCommand.Core.Domain.Entities;
-using CentralCommand.Core.Domain.ValueObjects;
 using MediatR;
 
 namespace CentralCommand.Api.Application.Commands.Portals;

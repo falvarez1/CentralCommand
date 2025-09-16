@@ -1,7 +1,5 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
-using CentralCommand.Core.Domain.ValueObjects;
-using CentralCommand.Core.Interfaces.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using CentralCommand.Api.Hubs;
@@ -36,9 +34,8 @@ public class UpdatePortalMetricsCommandHandler : IRequestHandler<UpdatePortalMet
             return false;
         }
 
-        // Update metrics
-        portal.Metrics = request.Metrics;
-        portal.Metrics.LastUpdated = DateTime.UtcNow;
+        // Update metrics - create new instance since LastUpdated is init-only
+        portal.Metrics = request.Metrics with { LastUpdated = DateTime.UtcNow };
         portal.LastCheckedAt = DateTime.UtcNow;
 
         // Update status based on metrics

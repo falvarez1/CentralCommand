@@ -31,6 +31,26 @@ public sealed record TimelineEntry
     public Guid PerformedBy { get; init; }
 
     /// <summary>
+    /// Gets the user name (alias for compatibility)
+    /// </summary>
+    public string User { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the author name (alias for compatibility)
+    /// </summary>
+    public string Author { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the entry type
+    /// </summary>
+    public string Type { get; init; } = "general";
+
+    /// <summary>
+    /// Gets the details (alias for Description)
+    /// </summary>
+    public string Details => Description;
+
+    /// <summary>
     /// Gets any additional metadata
     /// </summary>
     public Dictionary<string, object> Metadata { get; init; } = new();

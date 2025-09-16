@@ -1,6 +1,5 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
-using CentralCommand.Core.Interfaces.Repositories;
 using CentralCommand.Core.Interfaces.Services;
 using Microsoft.Extensions.Logging;
 
@@ -51,7 +50,7 @@ public partial class IncidentService : IIncidentService
                     Timestamp = DateTime.UtcNow,
                     Action = "Incident created",
                     User = reportedBy,
-                    Details = $"Incident '{title}' was created"
+                    Description = $"Incident '{title}' was created"
                 }
             }
         };
@@ -101,7 +100,7 @@ public partial class IncidentService : IIncidentService
             Timestamp = DateTime.UtcNow,
             Action = $"Status changed from {oldStatus} to {newStatus}",
             User = updatedBy,
-            Details = resolution
+            Description = resolution
         });
 
         await _unitOfWork.Incidents.UpdateAsync(incident, cancellationToken);
@@ -140,7 +139,7 @@ public partial class IncidentService : IIncidentService
             Timestamp = DateTime.UtcNow,
             Action = "Incident assigned",
             User = assignedBy,
-            Details = $"Assigned to {assignedTo}" + (previousAssignee != null ? $" (was: {previousAssignee})" : "")
+            Description = $"Assigned to {assignedTo}" + (previousAssignee != null ? $" (was: {previousAssignee})" : "")
         });
 
         await _unitOfWork.Incidents.UpdateAsync(incident, cancellationToken);
@@ -177,7 +176,7 @@ public partial class IncidentService : IIncidentService
             Timestamp = DateTime.UtcNow,
             Action = isInternal ? "Internal comment added" : "Comment added",
             User = author,
-            Details = content.Length > 100 ? $"{content.Substring(0, 100)}..." : content
+            Description = content.Length > 100 ? $"{content.Substring(0, 100)}..." : content
         };
 
         await _unitOfWork.Incidents.AddTimelineEntryAsync(incidentId, timelineEntry, cancellationToken);
@@ -229,7 +228,7 @@ public partial class IncidentService : IIncidentService
                 Timestamp = DateTime.UtcNow,
                 Action = "Incident escalated",
                 User = escalatedBy,
-                Details = $"Priority increased from {oldPriority} to {incident.Priority}"
+                Description = $"Priority increased from {oldPriority} to {incident.Priority}"
             });
 
             await _unitOfWork.Incidents.UpdateAsync(incident, cancellationToken);

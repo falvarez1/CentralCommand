@@ -22,6 +22,39 @@ public class Comment : BaseEntity
     public string Text { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the comment content (alias for Text)
+    /// </summary>
+    public string Content
+    {
+        get => Text;
+        set => Text = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the author user ID
+    /// </summary>
+    public Guid Author { get; set; }
+
+    /// <summary>
+    /// Gets or sets the author's display name
+    /// </summary>
+    [StringLength(200)]
+    public string AuthorName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the author's email
+    /// </summary>
+    [StringLength(256)]
+    public string? AuthorEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the author's avatar URL
+    /// </summary>
+    [StringLength(500)]
+    [Url]
+    public string? AuthorAvatar { get; set; }
+
+    /// <summary>
     /// Gets or sets whether this is a system-generated comment
     /// </summary>
     public bool IsSystemGenerated { get; set; }

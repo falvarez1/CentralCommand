@@ -22,6 +22,11 @@ public class ApiResponse<T>
     public string? Error { get; set; }
 
     /// <summary>
+    /// Gets or sets a success or informational message
+    /// </summary>
+    public string? Message { get; set; }
+
+    /// <summary>
     /// Gets or sets additional error details
     /// </summary>
     public Dictionary<string, string[]>? Errors { get; set; }

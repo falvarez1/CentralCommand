@@ -1,6 +1,5 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
-using CentralCommand.Core.Domain.ValueObjects;
 using CentralCommand.Core.Interfaces.Services;
 using Microsoft.AspNetCore.SignalR;
 using CentralCommand.Api.Hubs;

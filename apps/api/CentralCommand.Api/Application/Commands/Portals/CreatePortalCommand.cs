@@ -12,11 +12,11 @@ public record CreatePortalCommand : IRequest<PortalResponse>
     public string Url { get; init; } = string.Empty;
     public string? Description { get; init; }
     public string? Icon { get; init; }
-    public string Category { get; init; } = string.Empty;
+    public PortalCategory Category { get; init; }
     public PortalEnvironment Environment { get; init; }
     public PortalPriority Priority { get; init; }
-    public string? Owner { get; init; }
-    public string? Team { get; init; }
+    public Guid? Owner { get; init; }
+    public Guid? Team { get; init; }
     public List<string> Tags { get; init; } = new();
     public PortalConfig? Config { get; init; }
 }

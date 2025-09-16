@@ -72,4 +72,9 @@ public interface IPortalRepository : IRepository<Portal>
     /// Batch update portal status
     /// </summary>
     Task BatchUpdateStatusAsync(IEnumerable<Guid> portalIds, PortalStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a portal
+    /// </summary>
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -40,9 +40,19 @@ public class Incident : BaseEntity, IAggregateRoot
     public IncidentStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the incident priority
+    /// </summary>
+    public IncidentPriority Priority { get; set; } = IncidentPriority.Medium;
+
+    /// <summary>
     /// Gets or sets the affected portals (JSON array)
     /// </summary>
     public string? AffectedPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the affected portal IDs (JSON array of GUIDs)
+    /// </summary>
+    public string? AffectedPortalIds { get; set; }
 
     /// <summary>
     /// Gets or sets the affected services (JSON array)
@@ -60,6 +70,21 @@ public class Incident : BaseEntity, IAggregateRoot
     public Guid? Assignee { get; set; }
 
     /// <summary>
+    /// Gets or sets the assignee name
+    /// </summary>
+    public string? AssigneeName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assignee email
+    /// </summary>
+    public string? AssigneeEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets who the incident is assigned to (for display)
+    /// </summary>
+    public string? AssignedTo { get; set; }
+
+    /// <summary>
     /// Gets or sets the team ID
     /// </summary>
     public Guid? Team { get; set; }
@@ -68,6 +93,16 @@ public class Incident : BaseEntity, IAggregateRoot
     /// Gets or sets the reporter user ID
     /// </summary>
     public Guid? ReportedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reporter name
+    /// </summary>
+    public string? ReporterName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reporter email
+    /// </summary>
+    public string? ReporterEmail { get; set; }
 
     /// <summary>
     /// Gets or sets when the incident was resolved
@@ -129,6 +164,38 @@ public class Incident : BaseEntity, IAggregateRoot
     public bool IsPublic { get; set; }
 
     /// <summary>
+    /// Gets or sets the estimated resolution time
+    /// </summary>
+    public DateTime? EstimatedResolutionTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the detection source
+    /// </summary>
+    public string? DetectionSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the external ticket reference
+    /// </summary>
+    public string? ExternalTicketRef { get; set; }
+
+    /// <summary>
+    /// Gets or sets the incident URL
+    /// </summary>
+    [StringLength(500)]
+    [Url]
+    public string? IncidentUrl { get; set; }
+
+    /// <summary>
+    /// Gets the number of timeline entries
+    /// </summary>
+    public int TimelineEntryCount => GetTimeline().Count;
+
+    /// <summary>
+    /// Gets the number of comments
+    /// </summary>
+    public int CommentCount => Comments?.Count ?? 0;
+
+    /// <summary>
     /// Navigation property for comments
     /// </summary>
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
@@ -158,6 +225,34 @@ public class Incident : BaseEntity, IAggregateRoot
     {
         AffectedPortals = portals?.Any() == true
             ? System.Text.Json.JsonSerializer.Serialize(portals)
+            : null;
+    }
+
+    /// <summary>
+    /// Gets the list of affected portal IDs
+    /// </summary>
+    public List<Guid> GetAffectedPortalIds()
+    {
+        if (string.IsNullOrWhiteSpace(AffectedPortalIds))
+            return new List<Guid>();
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(AffectedPortalIds) ?? new List<Guid>();
+        }
+        catch
+        {
+            return new List<Guid>();
+        }
+    }
+
+    /// <summary>
+    /// Sets the list of affected portal IDs
+    /// </summary>
+    public void SetAffectedPortalIds(List<Guid> portalIds)
+    {
+        AffectedPortalIds = portalIds?.Any() == true
+            ? System.Text.Json.JsonSerializer.Serialize(portalIds)
             : null;
     }
 

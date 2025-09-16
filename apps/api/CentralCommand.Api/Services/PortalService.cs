@@ -7,10 +7,8 @@ using CentralCommand.Api.Infrastructure.Caching;
 using CentralCommand.Api.Infrastructure.Exceptions;
 using CentralCommand.Api.Infrastructure.Services;
 using CentralCommand.Api.Models.DTOs;
-using CentralCommand.Api.Models.Entities;
+using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Api.Repositories;
-using CentralCommand.Core.Domain.ValueObjects;
-using CentralCommand.Core.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace CentralCommand.Api.Services;

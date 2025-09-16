@@ -306,7 +306,7 @@ public class PortalsController : ControllerBase
         [FromBody] BatchOperationRequest request,
         CancellationToken cancellationToken = default)
     {
-        var results = new List<BatchOperationResult>();
+        var results = new List<BatchOperationItemResult>();
 
         foreach (var portalId in request.PortalIds)
         {
@@ -316,7 +316,7 @@ public class PortalsController : ControllerBase
                 {
                     case "delete":
                         var deleteResult = await _mediator.Send(new DeletePortalCommand(portalId), cancellationToken);
-                        results.Add(new BatchOperationResult
+                        results.Add(new BatchOperationItemResult
                         {
                             PortalId = portalId,
                             Success = deleteResult,
@@ -328,7 +328,7 @@ public class PortalsController : ControllerBase
                         if (request.Data != null && request.Data.TryGetValue("status", out var statusValue))
                         {
                             // In a real implementation, you would have an UpdatePortalStatusCommand
-                            results.Add(new BatchOperationResult
+                            results.Add(new BatchOperationItemResult
                             {
                                 PortalId = portalId,
                                 Success = true,
@@ -338,7 +338,7 @@ public class PortalsController : ControllerBase
                         break;
 
                     default:
-                        results.Add(new BatchOperationResult
+                        results.Add(new BatchOperationItemResult
                         {
                             PortalId = portalId,
                             Success = false,
@@ -350,7 +350,7 @@ public class PortalsController : ControllerBase
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing batch operation for portal {PortalId}", portalId);
-                results.Add(new BatchOperationResult
+                results.Add(new BatchOperationItemResult
                 {
                     PortalId = portalId,
                     Success = false,

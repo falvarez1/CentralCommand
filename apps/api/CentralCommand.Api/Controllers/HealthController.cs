@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CentralCommand.Api.Infrastructure.Data;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Diagnostics;
 
 namespace CentralCommand.Api.Controllers;
 
@@ -176,7 +177,8 @@ public class HealthController : ControllerBase
     private object GetMemoryInfo()
     {
         var process = Process.GetCurrentProcess();
-        var gcInfo = GC.GetMemoryInfo();
+        // GC.GetMemoryInfo() is available in .NET 5+
+        // var gcInfo = GC.GetMemoryInfo();
 
         return new
         {
@@ -185,10 +187,10 @@ public class HealthController : ControllerBase
             VirtualMemory = process.VirtualMemorySize64 / (1024 * 1024), // MB
             GC = new
             {
-                HeapSize = gcInfo.HeapSizeBytes / (1024 * 1024), // MB
-                Fragmented = gcInfo.FragmentedBytes / (1024 * 1024), // MB
-                HighMemoryThreshold = gcInfo.HighMemoryLoadThresholdBytes / (1024 * 1024), // MB
-                TotalAvailable = gcInfo.TotalAvailableMemoryBytes / (1024 * 1024), // MB
+                HeapSize = GC.GetTotalMemory(false) / (1024 * 1024), // MB
+                // Fragmented = gcInfo.FragmentedBytes / (1024 * 1024), // MB
+                // HighMemoryThreshold = gcInfo.HighMemoryLoadThresholdBytes / (1024 * 1024), // MB
+                // TotalAvailable = gcInfo.TotalAvailableMemoryBytes / (1024 * 1024), // MB
                 Gen0Collections = GC.CollectionCount(0),
                 Gen1Collections = GC.CollectionCount(1),
                 Gen2Collections = GC.CollectionCount(2)

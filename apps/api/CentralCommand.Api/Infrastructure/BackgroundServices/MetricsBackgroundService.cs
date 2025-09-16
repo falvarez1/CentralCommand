@@ -1,5 +1,5 @@
 using CentralCommand.Api.Infrastructure.Services;
-using CentralCommand.Core.Domain.ValueObjects;
+using CentralCommand.Api.Services;
 
 namespace CentralCommand.Api.Infrastructure.BackgroundServices;
 

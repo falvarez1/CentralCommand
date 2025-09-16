@@ -1,7 +1,6 @@
-using AutoMapper;
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.DTOs.Responses;
-using CentralCommand.Core.Interfaces.Repositories;
+using CentralCommand.Core.Extensions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -10,16 +9,13 @@ namespace CentralCommand.Api.Application.Commands.Incidents;
 public class AddIncidentCommentCommandHandler : IRequestHandler<AddIncidentCommentCommand, CommentResponse>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly ILogger<AddIncidentCommentCommandHandler> _logger;
 
     public AddIncidentCommentCommandHandler(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
         ILogger<AddIncidentCommentCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
         _logger = logger;
     }
 
@@ -37,23 +33,20 @@ public class AddIncidentCommentCommandHandler : IRequestHandler<AddIncidentComme
         {
             Id = Guid.NewGuid(),
             Content = request.Content,
-            Author = request.Author,
+            Author = Guid.Parse(request.Author),
             CreatedAt = DateTime.UtcNow,
             IsInternal = request.IsInternal,
-            Attachments = request.Attachments ?? new List<string>()
+            Attachments = request.Attachments != null ? string.Join(",", request.Attachments) : string.Empty
         };
 
         incident.Comments.Add(comment);
 
         // Add timeline entry
-        incident.Timeline.Add(new TimelineEntry
-        {
-            Id = Guid.NewGuid(),
-            Timestamp = DateTime.UtcNow,
-            Action = request.IsInternal ? "Internal comment added" : "Comment added",
-            User = request.Author,
-            Details = $"Comment added: {request.Content.Substring(0, Math.Min(request.Content.Length, 100))}..."
-        });
+        incident.AddTimelineEntry(
+            request.IsInternal ? "Internal comment added" : "Comment added",
+            $"Comment added: {request.Content.Substring(0, Math.Min(request.Content.Length, 100))}...",
+            comment.Author
+        );
 
         incident.UpdatedAt = DateTime.UtcNow;
 
@@ -62,6 +55,6 @@ public class AddIncidentCommentCommandHandler : IRequestHandler<AddIncidentComme
 
         _logger.LogInformation("Comment added successfully to incident: {IncidentId}", request.IncidentId);
 
-        return _mapper.Map<CommentResponse>(comment);
+        return comment.ToResponse();
     }
 }

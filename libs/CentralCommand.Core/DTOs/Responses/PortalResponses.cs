@@ -137,6 +137,11 @@ public class PortalResponse
     /// Gets or sets the ETag for optimistic concurrency
     /// </summary>
     public string ETag { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the metrics history
+    /// </summary>
+    public List<MetricsDataPoint> MetricsHistory { get; set; } = new();
 }
 
 /// <summary>
@@ -259,6 +264,35 @@ public class MetricsDataPoint
 /// </summary>
 public class HealthCheckResponse : PortalHealthCheckResponse
 {
+    /// <summary>
+    /// Gets or sets the health check ID
+    /// </summary>
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Gets or sets the health check type
+    /// </summary>
+    public string Type { get; set; } = "HTTP";
+
+    /// <summary>
+    /// Gets or sets the health check status
+    /// </summary>
+    public string Status { get; set; } = "Unknown";
+
+    /// <summary>
+    /// Gets or sets the last check time
+    /// </summary>
+    public DateTime LastCheckTime { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the response time in milliseconds
+    /// </summary>
+    public double ResponseTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP status code
+    /// </summary>
+    public int? StatusCode { get; set; }
 }
 
 /// <summary>

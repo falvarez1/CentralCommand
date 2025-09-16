@@ -1,7 +1,6 @@
-using AutoMapper;
 using CentralCommand.Core.DTOs.Common;
 using CentralCommand.Core.DTOs.Responses;
-using CentralCommand.Core.Interfaces.Repositories;
+using CentralCommand.Core.Extensions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -10,16 +9,13 @@ namespace CentralCommand.Api.Application.Queries.Portals;
 public class GetPortalsQueryHandler : IRequestHandler<GetPortalsQuery, PagedResult<PortalResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly ILogger<GetPortalsQueryHandler> _logger;
 
     public GetPortalsQueryHandler(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
         ILogger<GetPortalsQueryHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
         _logger = logger;
     }
 
@@ -91,7 +87,7 @@ public class GetPortalsQueryHandler : IRequestHandler<GetPortalsQuery, PagedResu
             .Take(request.PageSize)
             .ToList();
 
-        var portalResponses = _mapper.Map<List<PortalResponse>>(pagedPortals);
+        var portalResponses = pagedPortals.Select(p => p.ToResponse()).ToList();
 
         return new PagedResult<PortalResponse>
         {

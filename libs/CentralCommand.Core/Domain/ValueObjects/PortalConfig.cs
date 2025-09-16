@@ -51,6 +51,43 @@ public sealed record PortalConfig
     public bool EnableAutoRecovery { get; init; } = false;
 
     /// <summary>
+    /// Gets or sets the check interval in seconds (alias for HealthCheckInterval)
+    /// </summary>
+    public int CheckInterval
+    {
+        get => HealthCheckInterval;
+        init => HealthCheckInterval = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the alert threshold
+    /// </summary>
+    public double AlertThreshold { get; init; } = 90;
+
+    /// <summary>
+    /// Gets or sets whether monitoring is enabled (alias for EnableMonitoring)
+    /// </summary>
+    public bool IsMonitoringEnabled
+    {
+        get => EnableMonitoring;
+        init => EnableMonitoring = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the retry count (alias for RetryAttempts)
+    /// </summary>
+    public int RetryCount
+    {
+        get => RetryAttempts;
+        init => RetryAttempts = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the list of notification emails
+    /// </summary>
+    public List<string> NotificationEmails { get; init; } = new();
+
+    /// <summary>
     /// Creates a default configuration
     /// </summary>
     public static PortalConfig Default => new();

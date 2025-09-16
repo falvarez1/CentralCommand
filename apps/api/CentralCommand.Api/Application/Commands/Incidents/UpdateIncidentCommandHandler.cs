@@ -1,8 +1,7 @@
-using AutoMapper;
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
 using CentralCommand.Core.DTOs.Responses;
-using CentralCommand.Core.Interfaces.Repositories;
+using CentralCommand.Core.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using CentralCommand.Api.Hubs;
@@ -14,18 +13,15 @@ namespace CentralCommand.Api.Application.Commands.Incidents;
 public class UpdateIncidentCommandHandler : IRequestHandler<UpdateIncidentCommand, IncidentResponse>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly IHubContext<MetricsHub> _hubContext;
     private readonly ILogger<UpdateIncidentCommandHandler> _logger;
 
     public UpdateIncidentCommandHandler(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
         IHubContext<MetricsHub> hubContext,
         ILogger<UpdateIncidentCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
         _hubContext = hubContext;
         _logger = logger;
     }
@@ -93,13 +89,13 @@ public class UpdateIncidentCommandHandler : IRequestHandler<UpdateIncidentComman
 
         if (request.AffectedPortalIds != null)
         {
-            incident.AffectedPortalIds = request.AffectedPortalIds;
+            incident.AffectedPortalIds = string.Join(",", request.AffectedPortalIds.Select(id => id.ToString()));
             changes.AppendLine($"Affected portals updated ({request.AffectedPortalIds.Count} portals)");
         }
 
         if (request.Tags != null)
         {
-            incident.Tags = request.Tags;
+            incident.Tags = string.Join(",", request.Tags);
             changes.AppendLine("Tags updated");
         }
 
@@ -108,14 +104,11 @@ public class UpdateIncidentCommandHandler : IRequestHandler<UpdateIncidentComman
         // Add timeline entry for the update
         if (changes.Length > 0)
         {
-            incident.Timeline.Add(new TimelineEntry
-            {
-                Id = Guid.NewGuid(),
-                Timestamp = DateTime.UtcNow,
-                Action = "Incident updated",
-                User = request.UpdatedBy,
-                Details = changes.ToString().TrimEnd()
-            });
+            incident.AddTimelineEntry(
+                "Incident updated",
+                changes.ToString().TrimEnd(),
+                request.UpdatedBy != null ? Guid.Parse(request.UpdatedBy) : Guid.Empty
+            );
         }
 
         await _unitOfWork.Incidents.UpdateAsync(incident, cancellationToken);
@@ -132,6 +125,6 @@ public class UpdateIncidentCommandHandler : IRequestHandler<UpdateIncidentComman
 
         _logger.LogInformation("Incident updated successfully: {Id}", incident.Id);
 
-        return _mapper.Map<IncidentResponse>(incident);
+        return incident.ToResponse();
     }
 }

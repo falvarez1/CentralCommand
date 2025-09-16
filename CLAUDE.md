@@ -2,269 +2,243 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Required Reading
+**IMPORTANT**: All development in this codebase MUST follow the standards defined in:
+- [Software Design Standards](./docs/SOFTWARE-DESIGN-STANDARDS.md) - **READ THIS FIRST**
+
+These standards are non-negotiable and must be applied to all code changes, refactoring, and new development.
+
 ## Project Overview
 
-Central Command - A multi-component enterprise portal management system consisting of:
-1. **central-command-react**: Modern React application with TypeScript, Vite, and enterprise portal management features
-2. **CentralCommand.MockApi**: ASP.NET Core 8.0 Mock API with realistic data and SignalR real-time updates
-3. **prototype**: Single-file HTML prototype demonstrating core UI concepts
+Central Command - An enterprise portal management system built with clean architecture principles:
+
+### Monorepo Structure
+```
+CentralCommand/
+├── apps/
+│   └── api/
+│       ├── CentralCommand.Api/        # Main API (.NET 9)
+│       └── CentralCommand.MockApi/    # Mock API for development
+├── libs/
+│   └── CentralCommand.Core/           # Shared domain models, DTOs, interfaces
+├── central-command-react/              # React frontend application
+└── prototype/                          # HTML prototype
+```
+
+### Key Architectural Decisions
+
+1. **Clean Architecture**: Domain-driven design with clear layer separation
+2. **Shared Core Library**: All domain models, DTOs, and interfaces in `CentralCommand.Core`
+3. **No AutoMapper**: Simple extension methods for object mapping (see `MappingExtensions.cs`)
+4. **CQRS Pattern**: Command/Query separation using MediatR
+5. **Repository Pattern**: For data access abstraction
+6. **Value Objects**: Rich domain models with business logic
 
 ## Commands
 
-### Central Command React
+### API Projects
 
 ```bash
+# Build entire solution
+dotnet build
+
+# Run main API
+cd apps/api/CentralCommand.Api
+dotnet run --urls http://localhost:5000
+
+# Run mock API
+cd apps/api/CentralCommand.MockApi
+dotnet run --urls http://localhost:5001
+
+# Run tests
+dotnet test
+
+# Clean solution
+dotnet clean
+```
+
+### React Frontend
+
+```bash
+cd central-command-react
+
 # Development
 npm install          # Install dependencies
 npm run dev          # Start development server at http://localhost:5173
-npm run build        # Build for production (runs TypeScript check first)
+npm run build        # Build for production
 npm run preview      # Preview production build
 
 # Code Quality
-npm run lint         # Run ESLint with max warnings 0
+npm run lint         # Run ESLint
 
 # Testing
 npm run test         # Run all Playwright tests
 npm run test:e2e     # Run end-to-end tests only
-npm run test:visual  # Run visual regression tests
-npm run test:comparison # Run comparison tests
-npm run test:ui      # Run tests with Playwright UI
-npm run test:debug   # Debug tests interactively
-npm run test:headed  # Run tests with browser visible
-npm run test:report  # Show test report
-npm run test:update-snapshots # Update visual snapshots
-```
-
-### Mock API
-
-```bash
-# Development
-cd CentralCommand.MockApi
-dotnet restore       # Restore NuGet packages
-dotnet build         # Build the project
-dotnet run --urls http://localhost:5000  # Run API on port 5000
-
-# Access points
-# API: http://localhost:5000
-# Swagger UI: http://localhost:5000
-# SignalR Hub: http://localhost:5000/hubs/metrics
-```
-
-### Prototype
-
-```bash
-# Open directly in browser (no build required)
-start prototype/central-command-panel.html  # Windows
-open prototype/central-command-panel.html   # macOS
 ```
 
 ## Architecture
 
-### Central Command React
+### Core Library (CentralCommand.Core)
 
-#### Tech Stack
-- **React 19** with TypeScript 5.x
-- **Vite** for build tooling
-- **React Router 7** for routing
-- **Zustand** for state management (persistent stores)
-- **TanStack Query** for server state
-- **Tailwind CSS** with custom components
-- **Playwright** for E2E testing
-- **Zod** for runtime validation
+The `CentralCommand.Core` library contains all shared components:
 
-#### Project Structure
-```
-central-command-react/
-├── src/
-│   ├── components/       # Reusable UI components
-│   │   ├── command-palette/  # Command palette (Cmd+K)
-│   │   ├── incidents/        # Incident management
-│   │   ├── layout/          # Layout components
-│   │   ├── notifications/   # Toast notifications
-│   │   ├── portals/         # Portal cards and lists
-│   │   ├── stats/           # Statistics displays
-│   │   └── ui/              # Base UI components
-│   ├── pages/           # Page components
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Utilities and helpers
-│   ├── stores/          # Zustand state stores
-│   ├── types/           # TypeScript type definitions
-│   └── styles/          # Global CSS
-├── tests/               # Playwright test suites
-│   ├── e2e/            # End-to-end tests
-│   ├── visual/         # Visual regression tests
-│   └── comparison/     # Comparison tests
-└── public/             # Static assets
-```
+#### Domain Layer
+- **Entities**: `Portal`, `Incident`, `Comment`, `HealthCheck`, `MetricsHistory`
+- **Value Objects**: `PortalConfig`, `PortalMetrics`, `TimelineEntry`
+- **Enums**: `PortalStatus`, `PortalCategory`, `IncidentStatus`, `IncidentPriority`, etc.
 
-#### Path Aliases
-The project uses TypeScript path aliases configured in both `tsconfig.json` and `vite.config.ts`:
-- `@/*` → `./src/*`
-- `@components/*` → `./src/components/*`
-- `@pages/*` → `./src/pages/*`
-- `@hooks/*` → `./src/hooks/*`
-- `@lib/*` → `./src/lib/*`
-- `@stores/*` → `./src/stores/*`
-- `@types/*` → `./src/types/*`
+#### DTOs
+- **Requests**: Command and query DTOs for API operations
+- **Responses**: Response DTOs for API responses
+- **Common**: Shared DTOs like `ApiResponse`, `PagedResult`
 
-#### State Management (Zustand Stores)
+#### Interfaces
+- **Repositories**: `IPortalRepository`, `IIncidentRepository`, `IRepository<T>`
+- **Services**: Service interfaces for business logic
 
-Located in `src/stores/`:
-- **usePortalStore**: Portal CRUD, favorites, filtering, metrics updates
-- **useIncidentStore**: Incident management, filtering, creation
-- **useStatsStore**: System statistics, sparkline data, metrics calculations
-- **useUIStore**: UI state (theme, view mode, modals, notifications)
-- **useCommandStore**: Command palette state and search
+#### Extensions
+- **MappingExtensions**: Extension methods for mapping between entities and DTOs
+  - `ToResponse()` - Convert entities to response DTOs
+  - `ToEntity()` - Convert request DTOs to entities
+  - `UpdateFrom()` - Update entities from request DTOs
 
-All stores use `immer` for immutable updates and `zustand/middleware` for persistence.
+### API Project (CentralCommand.Api)
 
-#### Key Features
-- **Portal Management**: Monitor service portals with real-time metrics
-- **Incident Tracking**: Create, view, and manage system incidents
-- **Command Palette**: Quick actions via Cmd/Ctrl+K
-- **Real-time Updates**: 30-second metric refresh intervals
-- **Theme Support**: Dark/light mode with system preference detection
-- **View Modes**: Grid and list views for portal display
-- **Responsive Design**: Mobile-first with breakpoint utilities
+#### Application Layer (CQRS)
+- **Commands**: Create, Update, Delete operations
+- **Queries**: Read operations
+- **Handlers**: MediatR handlers for commands and queries
+- **Validators**: FluentValidation validators
 
-#### Testing Configuration
+#### Infrastructure Layer
+- **Data**: Entity Framework Core with SQL Server
+- **Services**: Implementation of service interfaces
+- **Middleware**: Authentication, error handling, etc.
+- **Background Services**: Metrics collection, health checks
 
-Playwright configured for:
-- Multiple browsers (Chromium, Firefox, WebKit, Edge, Chrome)
-- Mobile viewports (Pixel 5, iPhone 12, iPad)
-- Automatic dev server startup
-- Test artifacts in `test-results/`
-- HTML, JSON, and JUnit reporters
-- Screenshot/video capture on failure
+#### Controllers
+RESTful API controllers exposing endpoints for:
+- Portals management
+- Incidents tracking
+- Statistics and metrics
+- Health monitoring
 
-### Prototype
+### Key Patterns and Practices
 
-Single-file HTML application (`prototype/central-command-panel.html`) with:
-- Embedded CSS (lines 1-1969)
-- HTML structure (lines 1970-2432)
-- JavaScript logic (lines 2433-3351)
-- No external dependencies
-- Simulated data and metrics
-- Complete UI implementation
+#### Object Mapping
+Instead of AutoMapper, we use extension methods:
+```csharp
+// Entity to Response
+var response = portal.ToResponse();
 
-See `prototype/CLAUDE.md` for detailed prototype documentation.
+// Request to Entity
+var portal = request.ToEntity();
 
-### Mock API
-
-ASP.NET Core 8.0 Web API (`CentralCommand.MockApi/`) with:
-- **RESTful Endpoints**: Full CRUD operations for portals, incidents, statistics
-- **SignalR Hub**: Real-time metric updates every 30 seconds
-- **In-Memory Storage**: No database required for development
-- **Realistic Data**: 36+ portals, 15+ incidents with Bogus data generation
-- **CORS Support**: Configured for React app on localhost:5173
-- **Swagger UI**: Interactive API documentation at root URL
-
-#### API Endpoints
-```
-GET    /api/v1/portals                     # List portals with pagination
-GET    /api/v1/portals/{id}                # Get specific portal
-POST   /api/v1/portals/{id}/metrics        # Update portal metrics
-GET    /api/v1/portals/{id}/metrics/history # Get metrics history
-GET    /api/v1/portals/{id}/health         # Get health check config
-POST   /api/v1/portals/batch               # Batch operations
-
-GET    /api/v1/incidents                   # List incidents
-POST   /api/v1/incidents                   # Create incident
-GET    /api/v1/incidents/{id}/comments     # Get incident comments
-POST   /api/v1/incidents/{id}/comments     # Add incident comment
-
-GET    /api/v1/statistics                  # System statistics
-GET    /api/v1/statistics/sparklines       # Time-series data
+// Update Entity from Request
+portal.UpdateFrom(request);
 ```
 
-#### SignalR Events
-- `PortalMetricsUpdated`: Portal metrics changes
-- `IncidentStatusChanged`: Incident status updates
-- `StatisticsUpdated`: System statistics refresh
+#### Repository Pattern
+```csharp
+public interface IPortalRepository : IRepository<Portal>
+{
+    Task<Portal?> GetByIdWithDetailsAsync(Guid id);
+    Task<PagedResult<Portal>> GetPagedAsync(PortalQuery query);
+    // Domain-specific methods
+}
+```
 
-### React API Integration
+#### CQRS with MediatR
+```csharp
+// Command
+public record CreatePortalCommand : IRequest<PortalResponse> { }
 
-The React app includes full API integration:
-
-#### API Client (`src/lib/api/`)
-- **Axios configuration** with interceptors
-- **Service modules** for portals, incidents, statistics
-- **Error handling** with automatic retry
-- **Type-safe responses** with TypeScript
-
-#### TanStack Query Hooks (`src/hooks/queries/`)
-- `usePortals`, `usePortal`, `useCreatePortal`, `useUpdatePortal`
-- `useIncidents`, `useCreateIncident`, `useResolveIncident`
-- `useDashboardStats`, `useSparklineData`
-- Automatic caching and background refetching
-
-#### SignalR Integration (`src/lib/signalr/`)
-- Auto-reconnection with exponential backoff
-- React hooks: `useSignalR`, `useDashboardSignalR`
-- Real-time store updates via Zustand
-
-#### Environment Configuration
-- `.env` file with `VITE_API_URL=http://localhost:5000`
-- Type-safe config with Zod validation
-- Feature flags support
+// Handler
+public class CreatePortalCommandHandler : IRequestHandler<CreatePortalCommand, PortalResponse>
+{
+    public async Task<PortalResponse> Handle(CreatePortalCommand request, CancellationToken cancellationToken)
+    {
+        // Business logic
+    }
+}
+```
 
 ## Development Guidelines
 
-### Code Style
-- Use TypeScript strict mode
-- Follow existing component patterns
-- Use path aliases for imports
-- Implement proper error boundaries
-- Add loading states for async operations
+### Code Organization
+1. **Domain Logic**: Keep in Core library entities and value objects
+2. **Business Logic**: In application layer (commands/queries)
+3. **Infrastructure Concerns**: In infrastructure layer only
+4. **No Duplicate Types**: All shared types in Core library
 
-### Component Development
-- Check existing components before creating new ones
-- Follow the established pattern for similar components
-- Use the UI components from `src/components/ui/`
-- Implement proper TypeScript types
-- Add proper ARIA labels for accessibility
-
-### State Management
-- Use Zustand stores for global state
-- Keep component state local when possible
-- Use TanStack Query for server state
-- Implement optimistic updates where appropriate
+### Naming Conventions
+- **Commands**: `{Verb}{Entity}Command` (e.g., `CreatePortalCommand`)
+- **Queries**: `Get{Entity}{Criteria}Query` (e.g., `GetPortalByIdQuery`)
+- **Handlers**: `{CommandOrQuery}Handler`
+- **Responses**: `{Entity}Response`
+- **Requests**: `{Action}{Entity}Request`
 
 ### Testing
-- Run tests before committing changes
-- Update snapshots when UI changes are intentional
-- Write E2E tests for new features
-- Test across different viewports
+- Unit tests for domain logic
+- Integration tests for API endpoints
+- Use test data builders for complex objects
+- Mock external dependencies
+
+### Error Handling
+- Use `Result<T>` pattern for expected failures
+- Domain exceptions for business rule violations
+- Global exception handling middleware
+- Detailed error responses with proper HTTP status codes
 
 ## Important Notes
 
-1. **TypeScript Strict Mode**: All code must pass TypeScript strict checks
-2. **ESLint Zero Warnings**: Linting must pass with no warnings
-3. **Path Aliases**: Always use configured aliases for imports
-4. **Zustand Patterns**: Follow existing store patterns with immer
-5. **Tailwind Classes**: Use Tailwind utilities, avoid inline styles
-6. **Component Composition**: Prefer composition over inheritance
-7. **Error Handling**: Implement proper error boundaries and fallbacks
-8. **Accessibility**: Ensure ARIA labels and keyboard navigation
-9. **Performance**: Use React.memo and useMemo where appropriate
-10. **Testing**: Maintain test coverage for critical paths
+1. **No AutoMapper**: Use extension methods in `MappingExtensions.cs`
+2. **Clean Architecture**: Maintain strict layer boundaries
+3. **Rich Domain Models**: Business logic in entities, not anemic models
+4. **Type Safety**: Use strong typing, avoid `dynamic` or `object`
+5. **Async/Await**: Use async patterns for all I/O operations
+6. **Dependency Injection**: Use constructor injection
+7. **Configuration**: Use Options pattern with validation
+8. **Logging**: Structured logging with Serilog
+9. **Security**: JWT authentication, API key for services
+10. **Real-time**: SignalR for live updates
 
-## Running the Full Stack
+## Common Tasks
 
-To run the complete application with API integration:
+### Adding a New Entity
+1. Create entity in `Core/Domain/Entities`
+2. Create DTOs in `Core/DTOs/Requests` and `Core/DTOs/Responses`
+3. Add mapping extensions in `Core/Extensions/MappingExtensions.cs`
+4. Create repository interface in `Core/Interfaces/Repositories`
+5. Implement repository in `Api/Repositories`
+6. Create commands/queries in `Api/Application`
+7. Add controller in `Api/Controllers`
 
-```bash
-# Terminal 1: Start Mock API
-cd CentralCommand.MockApi
-dotnet run --urls http://localhost:5000
+### Adding a New Feature
+1. Define domain models if needed
+2. Create command/query and handler
+3. Add validator if needed
+4. Update repository if needed
+5. Add controller endpoint
+6. Write tests
+7. Update documentation
 
-# Terminal 2: Start React App
-cd central-command-react
-npm run dev
+## Troubleshooting
 
-# Access the application
-# React App: http://localhost:5173
-# API Swagger: http://localhost:5000
-```
+### Build Issues
+- Ensure .NET 9 SDK is installed
+- Run `dotnet restore` to restore packages
+- Check for duplicate type definitions
+- Verify all projects reference Core library
 
-The React app will automatically connect to the Mock API and SignalR hub for real-time updates.
+### Runtime Issues
+- Check connection strings in appsettings.json
+- Verify database migrations are applied
+- Check API authentication configuration
+- Review logs in console or log files
+
+## References
+- [Software Design Standards](./docs/SOFTWARE-DESIGN-STANDARDS.md)
+- [API Design Document](./API-Design-Document.md)
+- [.NET Documentation](https://docs.microsoft.com/dotnet)
+- [React Documentation](https://react.dev)

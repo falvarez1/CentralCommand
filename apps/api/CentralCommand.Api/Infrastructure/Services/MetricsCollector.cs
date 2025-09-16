@@ -102,4 +102,30 @@ public class MetricsCollector : IMetricsCollector
         }
         return tagList;
     }
+
+    public async Task<Core.Domain.ValueObjects.PortalMetrics> CollectMetricsAsync(Guid portalId, CancellationToken cancellationToken = default)
+    {
+        // Generate random metrics for demonstration purposes
+        var random = new Random();
+
+        await Task.Delay(random.Next(10, 50), cancellationToken); // Simulate async work
+
+        return new Core.Domain.ValueObjects.PortalMetrics
+        {
+            ResponseTime = random.Next(50, 500),
+            Uptime = random.Next(95, 100),
+            Cpu = random.Next(10, 80),
+            Memory = random.Next(20, 90),
+            Requests = random.Next(100, 10000),
+            Errors = random.Next(0, 50),
+            ErrorRate = random.NextDouble() * 5,
+            Throughput = random.Next(10, 1000),
+            Latency = random.Next(10, 100),
+            RequestsPerMinute = random.Next(60, 600),
+            AverageLoadTime = random.Next(100, 1000),
+            PeakResponseTime = random.Next(500, 2000),
+            LastUpdated = DateTime.UtcNow,
+            Timestamp = DateTime.UtcNow
+        };
+    }
 }

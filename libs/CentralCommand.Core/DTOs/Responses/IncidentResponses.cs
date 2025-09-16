@@ -152,6 +152,21 @@ public class IncidentResponse
     /// Gets or sets the number of comments
     /// </summary>
     public int CommentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the incident priority
+    /// </summary>
+    public IncidentPriority? Priority { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timeline entry count
+    /// </summary>
+    public int TimelineEntryCount => Timeline?.Count ?? 0;
+
+    /// <summary>
+    /// Gets or sets the comments list
+    /// </summary>
+    public List<CommentResponse> Comments { get; set; } = new();
 }
 
 /// <summary>

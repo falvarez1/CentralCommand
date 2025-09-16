@@ -1,5 +1,6 @@
 using CentralCommand.Api.Application.Commands.Incidents;
 using CentralCommand.Api.Application.Queries.Incidents;
+using CentralCommand.Core.Domain.Enums;
 using CentralCommand.Core.DTOs.Common;
 using CentralCommand.Core.DTOs.Requests;
 using CentralCommand.Core.DTOs.Responses;
@@ -103,12 +104,12 @@ public class IncidentsController : ControllerBase
         {
             Title = request.Title,
             Description = request.Description,
-            Priority = request.Priority,
+            Priority = request.Priority ?? IncidentPriority.Medium,
             Type = request.Type,
-            ReportedBy = request.ReportedBy,
+            ReportedBy = request.ReportedBy?.ToString() ?? string.Empty,
             AssignedTo = request.AssignedTo,
-            AffectedPortalIds = request.AffectedPortalIds,
-            Tags = request.Tags
+            AffectedPortalIds = request.AffectedPortalIds ?? new List<Guid>(),
+            Tags = request.Tags ?? new List<string>()
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -301,7 +302,18 @@ public class IncidentsController : ControllerBase
         return Ok(new ApiResponse<List<TimelineEntryResponse>>
         {
             Success = true,
-            Data = incident.Timeline
+            Data = incident.Timeline.Select(t => new TimelineEntryResponse
+            {
+                Id = t.Id,
+                IncidentId = incident.Id,
+                Timestamp = t.Timestamp,
+                Action = t.Action,
+                Description = t.Description,
+                PerformedBy = t.PerformedBy,
+                Author = t.Author,
+                Type = t.Type,
+                Metadata = t.Metadata
+            }).ToList()
         });
     }
 
@@ -358,9 +370,9 @@ public class IncidentsController : ControllerBase
         // Escalate priority
         var newPriority = incident.Priority switch
         {
-            "Low" => Core.Domain.Enums.IncidentPriority.Medium,
-            "Medium" => Core.Domain.Enums.IncidentPriority.High,
-            "High" => Core.Domain.Enums.IncidentPriority.Critical,
+            Core.Domain.Enums.IncidentPriority.Low => Core.Domain.Enums.IncidentPriority.Medium,
+            Core.Domain.Enums.IncidentPriority.Medium => Core.Domain.Enums.IncidentPriority.High,
+            Core.Domain.Enums.IncidentPriority.High => Core.Domain.Enums.IncidentPriority.Critical,
             _ => Core.Domain.Enums.IncidentPriority.Critical
         };
 

@@ -13,11 +13,11 @@ public record UpdatePortalCommand : IRequest<PortalResponse>
     public string? Url { get; init; }
     public string? Description { get; init; }
     public string? Icon { get; init; }
-    public string? Category { get; init; }
+    public PortalCategory? Category { get; init; }
     public PortalEnvironment? Environment { get; init; }
     public PortalPriority? Priority { get; init; }
-    public string? Owner { get; init; }
-    public string? Team { get; init; }
+    public Guid? Owner { get; init; }
+    public Guid? Team { get; init; }
     public List<string>? Tags { get; init; }
     public PortalConfig? Config { get; init; }
 }

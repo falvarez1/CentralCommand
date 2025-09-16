@@ -67,9 +67,28 @@ public class Portal : BaseEntity, IAggregateRoot
     public PortalMetrics Metrics { get; set; } = PortalMetrics.Default;
 
     /// <summary>
+    /// Gets or sets the metrics history (JSON array)
+    /// </summary>
+    public string? MetricsHistoryJson { get; set; }
+
+    /// <summary>
     /// Gets or sets when the portal was last checked
     /// </summary>
     public DateTime LastChecked { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets when the portal was last checked (alias for LastChecked)
+    /// </summary>
+    public DateTime LastCheckedAt
+    {
+        get => LastChecked;
+        set => LastChecked = value;
+    }
+
+    /// <summary>
+    /// Gets or sets when the portal was last modified
+    /// </summary>
+    public DateTime LastModifiedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// Gets or sets when the last incident occurred
@@ -196,6 +215,7 @@ public class Portal : BaseEntity, IAggregateRoot
     {
         Metrics = metrics;
         LastChecked = DateTime.UtcNow;
+        LastModifiedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
         ETag = Guid.NewGuid().ToString();
     }
@@ -206,6 +226,7 @@ public class Portal : BaseEntity, IAggregateRoot
     public void UpdateStatus(PortalStatus status)
     {
         Status = status;
+        LastModifiedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
         ETag = Guid.NewGuid().ToString();
 

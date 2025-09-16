@@ -51,6 +51,41 @@ public sealed record PortalMetrics
     public double Latency { get; init; }
 
     /// <summary>
+    /// Gets the CPU usage percentage (alias for Cpu property)
+    /// </summary>
+    public double CpuUsage => Cpu;
+
+    /// <summary>
+    /// Gets the memory usage percentage (alias for Memory property)
+    /// </summary>
+    public double MemoryUsage => Memory;
+
+    /// <summary>
+    /// Gets or sets the requests per minute
+    /// </summary>
+    public int RequestsPerMinute { get; init; }
+
+    /// <summary>
+    /// Gets the timestamp when the metrics were recorded
+    /// </summary>
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the average load time in milliseconds
+    /// </summary>
+    public double AverageLoadTime { get; init; }
+
+    /// <summary>
+    /// Gets or sets the peak response time in milliseconds
+    /// </summary>
+    public double PeakResponseTime { get; init; }
+
+    /// <summary>
+    /// Gets or sets when the metrics were last updated
+    /// </summary>
+    public DateTime LastUpdated { get; init; } = DateTime.UtcNow;
+
+    /// <summary>
     /// Creates a new instance of PortalMetrics with default values
     /// </summary>
     public static PortalMetrics Default => new()
@@ -63,7 +98,8 @@ public sealed record PortalMetrics
         Errors = 0,
         ErrorRate = 0,
         Throughput = 0,
-        Latency = 0
+        Latency = 0,
+        Timestamp = DateTime.UtcNow
     };
 
     /// <summary>

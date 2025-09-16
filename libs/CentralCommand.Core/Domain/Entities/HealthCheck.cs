@@ -30,6 +30,16 @@ public class HealthCheck : BaseEntity
     public string Method { get; set; } = "GET";
 
     /// <summary>
+    /// Gets or sets the health check type
+    /// </summary>
+    public HealthCheckType Type { get; set; } = HealthCheckType.Http;
+
+    /// <summary>
+    /// Gets or sets the health check status
+    /// </summary>
+    public HealthCheckStatus Status { get; set; } = HealthCheckStatus.Unknown;
+
+    /// <summary>
     /// Gets or sets the expected status code
     /// </summary>
     public int ExpectedStatusCode { get; set; } = 200;
@@ -125,6 +135,7 @@ public class HealthCheck : BaseEntity
     {
         LastChecked = DateTime.UtcNow;
         LastStatus = PortalStatus.Active;
+        Status = HealthCheckStatus.Healthy;
         LastResponseTime = responseTime;
         LastError = null;
         ConsecutiveFailures = 0;
@@ -138,6 +149,7 @@ public class HealthCheck : BaseEntity
     {
         LastChecked = DateTime.UtcNow;
         LastStatus = PortalStatus.Down;
+        Status = HealthCheckStatus.Unhealthy;
         LastError = error;
         ConsecutiveFailures++;
         UpdatedAt = DateTime.UtcNow;

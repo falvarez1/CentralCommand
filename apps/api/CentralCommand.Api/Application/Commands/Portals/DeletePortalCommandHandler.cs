@@ -1,4 +1,3 @@
-using CentralCommand.Core.Interfaces.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +27,7 @@ public class DeletePortalCommandHandler : IRequestHandler<DeletePortalCommand, b
             return false;
         }
 
-        await _unitOfWork.Portals.DeleteAsync(portal, cancellationToken);
+        await _unitOfWork.Portals.DeleteAsync(portal.Id, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Portal deleted successfully: {Id}", request.Id);

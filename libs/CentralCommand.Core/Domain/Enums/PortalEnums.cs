@@ -5,8 +5,12 @@ namespace CentralCommand.Core.Domain.Enums;
 /// </summary>
 public enum PortalStatus
 {
+    /// <summary>Portal is healthy and functioning normally</summary>
+    Healthy,
     /// <summary>Portal is active and healthy</summary>
     Active,
+    /// <summary>Portal is experiencing warnings but still operational</summary>
+    Warning,
     /// <summary>Portal is experiencing degraded performance</summary>
     Degraded,
     /// <summary>Portal is down</summary>

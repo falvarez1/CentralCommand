@@ -1,7 +1,5 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
-using CentralCommand.Core.Domain.ValueObjects;
-using CentralCommand.Core.Interfaces.Repositories;
 using CentralCommand.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;

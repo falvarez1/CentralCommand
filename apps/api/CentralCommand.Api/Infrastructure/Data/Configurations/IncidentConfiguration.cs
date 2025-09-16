@@ -31,17 +31,39 @@ public class IncidentConfiguration : IEntityTypeConfiguration<Incident>
             .HasConversion<string>()
             .HasMaxLength(50);
 
+        builder.Property(i => i.Severity)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
         builder.Property(i => i.Type)
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(50);
 
         builder.Property(i => i.ReportedBy)
-            .IsRequired()
+            .HasColumnType("uniqueidentifier");
+
+        builder.Property(i => i.Assignee)
+            .HasColumnType("uniqueidentifier");
+
+        builder.Property(i => i.AssigneeName)
             .HasMaxLength(200);
+
+        builder.Property(i => i.AssigneeEmail)
+            .HasMaxLength(256);
 
         builder.Property(i => i.AssignedTo)
             .HasMaxLength(200);
+
+        builder.Property(i => i.Team)
+            .HasColumnType("uniqueidentifier");
+
+        builder.Property(i => i.ReporterName)
+            .HasMaxLength(200);
+
+        builder.Property(i => i.ReporterEmail)
+            .HasMaxLength(256);
 
         builder.Property(i => i.Resolution)
             .HasMaxLength(4000);
@@ -51,31 +73,78 @@ public class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         builder.Property(i => i.UpdatedAt);
 
+        builder.Property(i => i.CreatedBy)
+            .IsRequired();
+
+        builder.Property(i => i.UpdatedBy)
+            .IsRequired();
+
+        builder.Property(i => i.ETag)
+            .IsRequired()
+            .HasMaxLength(50)
+            .IsConcurrencyToken();
+
+        builder.Property(i => i.IsDeleted)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(i => i.DeletedAt);
+
+        builder.Property(i => i.DeletedBy);
+
         builder.Property(i => i.ResolvedAt);
 
+        builder.Property(i => i.AcknowledgedAt);
+
+        builder.Property(i => i.EstimatedResolutionTime);
+
+        builder.Property(i => i.RootCause)
+            .HasMaxLength(5000);
+
+        builder.Property(i => i.PostmortemUrl)
+            .HasMaxLength(500);
+
+        builder.Property(i => i.DetectionSource)
+            .HasMaxLength(200);
+
+        builder.Property(i => i.ExternalTicketRef)
+            .HasMaxLength(200);
+
+        builder.Property(i => i.IncidentUrl)
+            .HasMaxLength(500);
+
+        builder.Property(i => i.IsPublic)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(i => i.ImpactedUsers);
+
+        // JSON serialized properties
+        builder.Property(i => i.AffectedPortals)
+            .HasColumnType("nvarchar(max)");
+
         builder.Property(i => i.AffectedPortalIds)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<Guid>>(v, (JsonSerializerOptions?)null) ?? new List<Guid>())
+            .HasColumnType("nvarchar(max)");
+
+        builder.Property(i => i.AffectedServices)
             .HasColumnType("nvarchar(max)");
 
         builder.Property(i => i.Tags)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
             .HasColumnType("nvarchar(max)");
 
-        // Configure owned collections
-        builder.OwnsMany(i => i.Timeline, timeline =>
-        {
-            timeline.ToTable("IncidentTimeline");
-            timeline.WithOwner().HasForeignKey("IncidentId");
-            timeline.Property(t => t.Timestamp).IsRequired();
-            timeline.Property(t => t.Action).IsRequired().HasMaxLength(500);
-            timeline.Property(t => t.User).IsRequired().HasMaxLength(200);
-            timeline.Property(t => t.Details).HasMaxLength(2000);
-            timeline.HasKey("IncidentId", "Id");
-        });
+        builder.Property(i => i.Timeline)
+            .HasColumnType("nvarchar(max)");
+
+        builder.Property(i => i.Metrics)
+            .HasColumnType("nvarchar(max)");
+
+        builder.Property(i => i.Notifications)
+            .HasColumnType("nvarchar(max)");
+
+        builder.Property(i => i.RelatedIncidents)
+            .HasColumnType("nvarchar(max)");
+
+        // Configure relationships
 
         builder.HasMany(i => i.Comments)
             .WithOne()
@@ -88,5 +157,8 @@ public class IncidentConfiguration : IEntityTypeConfiguration<Incident>
         builder.HasIndex(i => i.Type);
         builder.HasIndex(i => i.CreatedAt);
         builder.HasIndex(i => new { i.Status, i.Priority });
+        builder.HasIndex(i => i.Severity);
+        builder.HasIndex(i => i.Team);
+        builder.HasIndex(i => i.Assignee);
     }
 }

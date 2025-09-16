@@ -40,9 +40,24 @@ public class CreateIncidentRequest
     public IncidentStatus Status { get; set; } = IncidentStatus.Open;
 
     /// <summary>
+    /// Gets or sets the incident priority
+    /// </summary>
+    public IncidentPriority? Priority { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user assigned to the incident
+    /// </summary>
+    public string? AssignedTo { get; set; }
+
+    /// <summary>
     /// Gets or sets the affected portal IDs
     /// </summary>
     public List<string>? AffectedPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the affected portal IDs as GUIDs
+    /// </summary>
+    public List<Guid>? AffectedPortalIds { get; set; }
 
     /// <summary>
     /// Gets or sets the affected services
@@ -113,9 +128,25 @@ public class UpdateIncidentRequest
     public IncidentStatus? Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the incident priority
+    /// </summary>
+    public IncidentPriority? Priority { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user assigned to the incident
+    /// </summary>
+    [StringLength(200)]
+    public string? AssignedTo { get; set; }
+
+    /// <summary>
     /// Gets or sets the affected portal IDs
     /// </summary>
     public List<string>? AffectedPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the affected portal IDs as GUIDs
+    /// </summary>
+    public List<Guid>? AffectedPortalIds { get; set; }
 
     /// <summary>
     /// Gets or sets the affected services
@@ -170,6 +201,12 @@ public class UpdateIncidentRequest
     /// Gets or sets whether the incident is public
     /// </summary>
     public bool? IsPublic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user who updated the incident
+    /// </summary>
+    [StringLength(200)]
+    public string? UpdatedBy { get; set; }
 
     /// <summary>
     /// Gets or sets the ETag for optimistic concurrency
@@ -330,6 +367,11 @@ public class ResolveIncidentRequest
     public string? PostmortemUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets who resolved the incident
+    /// </summary>
+    public string? ResolvedBy { get; set; }
+
+    /// <summary>
     /// Gets or sets the ETag for optimistic concurrency
     /// </summary>
     public string? ETag { get; set; }
@@ -359,6 +401,11 @@ public class EscalateIncidentRequest
     public List<string>? TeamsToNotify { get; set; }
 
     /// <summary>
+    /// Gets or sets who escalated the incident
+    /// </summary>
+    public string? EscalatedBy { get; set; }
+
+    /// <summary>
     /// Gets or sets the ETag for optimistic concurrency
     /// </summary>
     public string? ETag { get; set; }
@@ -380,6 +427,18 @@ public class UpdateIncidentStatusRequest
     /// </summary>
     [StringLength(1000)]
     public string? Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the resolution description
+    /// </summary>
+    [StringLength(5000)]
+    public string? Resolution { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user who updated the status
+    /// </summary>
+    [StringLength(200)]
+    public string? UpdatedBy { get; set; }
 
     /// <summary>
     /// Gets or sets the ETag for optimistic concurrency
@@ -410,6 +469,16 @@ public class AssignIncidentRequest
     public string? Notes { get; set; }
 
     /// <summary>
+    /// Gets or sets the person being assigned to (string representation)
+    /// </summary>
+    public string? AssignedTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets who is doing the assignment
+    /// </summary>
+    public string? AssignedBy { get; set; }
+
+    /// <summary>
     /// Gets or sets the ETag for optimistic concurrency
     /// </summary>
     public string? ETag { get; set; }
@@ -426,6 +495,20 @@ public class AddCommentRequest
     [Required]
     [StringLength(5000)]
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the comment content (alias for Text)
+    /// </summary>
+    public string Content
+    {
+        get => Text;
+        set => Text = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the comment author
+    /// </summary>
+    public string? Author { get; set; }
 
     /// <summary>
     /// Gets or sets whether this comment is internal only

@@ -82,6 +82,11 @@ public class CreatePortalRequest
     public bool IsPublic { get; set; }
 
     /// <summary>
+    /// Gets or sets the owner ID
+    /// </summary>
+    public Guid? Owner { get; set; }
+
+    /// <summary>
     /// Gets or sets the team ID
     /// </summary>
     public Guid? Team { get; set; }
@@ -170,6 +175,11 @@ public class UpdatePortalRequest
     /// Gets or sets whether the portal is public
     /// </summary>
     public bool? IsPublic { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owner ID
+    /// </summary>
+    public Guid? Owner { get; set; }
 
     /// <summary>
     /// Gets or sets the team ID

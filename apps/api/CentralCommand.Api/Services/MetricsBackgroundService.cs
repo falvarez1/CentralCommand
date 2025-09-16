@@ -1,5 +1,4 @@
 using CentralCommand.Api.Application.Commands.Portals;
-using CentralCommand.Core.Interfaces.Repositories;
 using CentralCommand.Core.Interfaces.Services;
 using MediatR;
 using Microsoft.Extensions.Hosting;

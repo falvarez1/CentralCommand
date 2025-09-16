@@ -44,6 +44,11 @@ public interface IIncidentRepository : IRepository<Incident>
     Task<Incident?> GetWithCommentsAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets incident with all details including comments and timeline
+    /// </summary>
+    Task<Incident?> GetIncidentWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets open incidents
     /// </summary>
     Task<IEnumerable<Incident>> GetOpenIncidentsAsync(CancellationToken cancellationToken = default);
@@ -77,4 +82,14 @@ public interface IIncidentRepository : IRepository<Incident>
     /// Searches incidents
     /// </summary>
     Task<IEnumerable<Incident>> SearchAsync(string searchTerm, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets incident count by priority
+    /// </summary>
+    Task<Dictionary<IncidentPriority, int>> GetIncidentCountByPriorityAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets incidents by date range (alias for GetByDateRangeAsync)
+    /// </summary>
+    Task<IEnumerable<Incident>> GetIncidentsByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
 }

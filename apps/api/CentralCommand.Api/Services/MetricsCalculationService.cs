@@ -1,6 +1,5 @@
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
-using CentralCommand.Core.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace CentralCommand.Api.Services;
@@ -97,52 +96,60 @@ public class MetricsCalculationService : IMetricsCalculationService
 
     public PortalMetrics GenerateRandomMetrics(PortalStatus? targetStatus = null)
     {
-        var metrics = new PortalMetrics
-        {
-            LastUpdated = DateTime.UtcNow
-        };
+        int responseTime;
+        double uptime;
+        double errorRate;
+        int requestsPerMinute;
 
         switch (targetStatus)
         {
             case PortalStatus.Healthy:
-                metrics.ResponseTime = _random.Next(100, 1000);
-                metrics.Uptime = 95 + _random.NextDouble() * 5; // 95-100%
-                metrics.ErrorRate = _random.NextDouble() * 2; // 0-2%
-                metrics.RequestsPerMinute = _random.Next(100, 1000);
+                responseTime = _random.Next(100, 1000);
+                uptime = 95 + _random.NextDouble() * 5; // 95-100%
+                errorRate = _random.NextDouble() * 2; // 0-2%
+                requestsPerMinute = _random.Next(100, 1000);
                 break;
 
             case PortalStatus.Warning:
-                metrics.ResponseTime = _random.Next(1500, 3000);
-                metrics.Uptime = 90 + _random.NextDouble() * 5; // 90-95%
-                metrics.ErrorRate = 3 + _random.NextDouble() * 5; // 3-8%
-                metrics.RequestsPerMinute = _random.Next(50, 500);
+                responseTime = _random.Next(1500, 3000);
+                uptime = 90 + _random.NextDouble() * 5; // 90-95%
+                errorRate = 3 + _random.NextDouble() * 5; // 3-8%
+                requestsPerMinute = _random.Next(50, 500);
                 break;
 
             case PortalStatus.Degraded:
-                metrics.ResponseTime = _random.Next(3000, 7000);
-                metrics.Uptime = 70 + _random.NextDouble() * 20; // 70-90%
-                metrics.ErrorRate = 10 + _random.NextDouble() * 15; // 10-25%
-                metrics.RequestsPerMinute = _random.Next(10, 100);
+                responseTime = _random.Next(3000, 7000);
+                uptime = 70 + _random.NextDouble() * 20; // 70-90%
+                errorRate = 10 + _random.NextDouble() * 15; // 10-25%
+                requestsPerMinute = _random.Next(10, 100);
                 break;
 
             case PortalStatus.Down:
-                metrics.ResponseTime = _random.Next(7000, 15000);
-                metrics.Uptime = _random.NextDouble() * 50; // 0-50%
-                metrics.ErrorRate = 50 + _random.NextDouble() * 50; // 50-100%
-                metrics.RequestsPerMinute = 0;
+                responseTime = _random.Next(7000, 15000);
+                uptime = _random.NextDouble() * 50; // 0-50%
+                errorRate = 50 + _random.NextDouble() * 50; // 50-100%
+                requestsPerMinute = 0;
                 break;
 
             default:
                 // Random distribution
-                metrics.ResponseTime = _random.Next(100, 5000);
-                metrics.Uptime = 50 + _random.NextDouble() * 50; // 50-100%
-                metrics.ErrorRate = _random.NextDouble() * 20; // 0-20%
-                metrics.RequestsPerMinute = _random.Next(0, 1000);
+                responseTime = _random.Next(100, 5000);
+                uptime = 50 + _random.NextDouble() * 50; // 50-100%
+                errorRate = _random.NextDouble() * 20; // 0-20%
+                requestsPerMinute = _random.Next(0, 1000);
                 break;
         }
 
-        metrics.AverageLoadTime = metrics.ResponseTime * 1.2;
-        metrics.PeakResponseTime = metrics.ResponseTime * 1.5;
+        var metrics = new PortalMetrics
+        {
+            ResponseTime = responseTime,
+            Uptime = uptime,
+            ErrorRate = errorRate,
+            RequestsPerMinute = requestsPerMinute,
+            AverageLoadTime = responseTime * 1.2,
+            PeakResponseTime = responseTime * 1.5,
+            LastUpdated = DateTime.UtcNow
+        };
 
         return metrics;
     }

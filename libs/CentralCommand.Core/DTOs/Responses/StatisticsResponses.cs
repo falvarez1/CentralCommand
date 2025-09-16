@@ -28,6 +28,61 @@ public class StatisticsResponse
     public Dictionary<string, List<SparklineData>> Sparklines { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets the total number of portals
+    /// </summary>
+    public int TotalPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of healthy portals
+    /// </summary>
+    public int HealthyPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of active incidents
+    /// </summary>
+    public int ActiveIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the incident type breakdown
+    /// </summary>
+    public Dictionary<string, int> IncidentTypeBreakdown { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the average response time in milliseconds
+    /// </summary>
+    public double AverageResponseTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average uptime percentage
+    /// </summary>
+    public double AverageUptime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the average error rate percentage
+    /// </summary>
+    public double AverageErrorRate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of down portals
+    /// </summary>
+    public int DownPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of degraded portals
+    /// </summary>
+    public int DegradedPortals { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of critical incidents
+    /// </summary>
+    public int CriticalIncidents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of requests
+    /// </summary>
+    public long TotalRequests { get; set; }
+
+    /// <summary>
     /// Gets or sets the timestamp of the statistics
     /// </summary>
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;

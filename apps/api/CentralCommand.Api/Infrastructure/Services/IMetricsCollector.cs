@@ -29,4 +29,9 @@ public interface IMetricsCollector
     /// Records an event
     /// </summary>
     void RecordEvent(string name, string description, Dictionary<string, string>? tags = null);
+
+    /// <summary>
+    /// Collects metrics for a portal
+    /// </summary>
+    Task<Core.Domain.ValueObjects.PortalMetrics> CollectMetricsAsync(Guid portalId, CancellationToken cancellationToken = default);
 }

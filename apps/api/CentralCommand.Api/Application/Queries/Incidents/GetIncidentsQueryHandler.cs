@@ -1,7 +1,6 @@
-using AutoMapper;
 using CentralCommand.Core.DTOs.Common;
 using CentralCommand.Core.DTOs.Responses;
-using CentralCommand.Core.Interfaces.Repositories;
+using CentralCommand.Core.Extensions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -10,16 +9,13 @@ namespace CentralCommand.Api.Application.Queries.Incidents;
 public class GetIncidentsQueryHandler : IRequestHandler<GetIncidentsQuery, PagedResult<IncidentResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly ILogger<GetIncidentsQueryHandler> _logger;
 
     public GetIncidentsQueryHandler(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
         ILogger<GetIncidentsQueryHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
         _logger = logger;
     }
 
@@ -108,7 +104,7 @@ public class GetIncidentsQueryHandler : IRequestHandler<GetIncidentsQuery, Paged
             .Take(request.PageSize)
             .ToList();
 
-        var incidentResponses = _mapper.Map<List<IncidentResponse>>(pagedIncidents);
+        var incidentResponses = pagedIncidents.Select(i => i.ToResponse()).ToList();
 
         return new PagedResult<IncidentResponse>
         {

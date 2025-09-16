@@ -1,6 +1,5 @@
 using CentralCommand.Core.Domain.Enums;
 using CentralCommand.Core.DTOs.Responses;
-using CentralCommand.Core.Interfaces.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
 

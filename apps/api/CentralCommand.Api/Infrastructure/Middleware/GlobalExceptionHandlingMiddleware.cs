@@ -48,38 +48,38 @@ public class GlobalExceptionHandlingMiddleware
             case KeyNotFoundException notFoundEx:
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 response.Message = notFoundEx.Message;
-                response.Errors = new List<string> { "The requested resource was not found" };
+                response.Errors = new Dictionary<string, string[]> { ["NotFound"] = new[] { "The requested resource was not found" } };
                 break;
 
             case UnauthorizedAccessException unauthorizedEx:
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 response.Message = "Unauthorized access";
-                response.Errors = new List<string> { unauthorizedEx.Message };
+                response.Errors = new Dictionary<string, string[]> { ["Unauthorized"] = new[] { unauthorizedEx.Message } };
                 break;
 
             case ArgumentException argEx:
             case ArgumentNullException argNullEx:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 response.Message = "Invalid request";
-                response.Errors = new List<string> { exception.Message };
+                response.Errors = new Dictionary<string, string[]> { ["BadRequest"] = new[] { exception.Message } };
                 break;
 
             case InvalidOperationException invalidOpEx:
                 context.Response.StatusCode = (int)HttpStatusCode.Conflict;
                 response.Message = "Operation cannot be performed";
-                response.Errors = new List<string> { invalidOpEx.Message };
+                response.Errors = new Dictionary<string, string[]> { ["Conflict"] = new[] { invalidOpEx.Message } };
                 break;
 
             case TimeoutException timeoutEx:
                 context.Response.StatusCode = (int)HttpStatusCode.RequestTimeout;
                 response.Message = "Request timeout";
-                response.Errors = new List<string> { "The operation timed out" };
+                response.Errors = new Dictionary<string, string[]> { ["Timeout"] = new[] { "The operation timed out" } };
                 break;
 
             case NotImplementedException notImplEx:
                 context.Response.StatusCode = (int)HttpStatusCode.NotImplemented;
                 response.Message = "Feature not implemented";
-                response.Errors = new List<string> { notImplEx.Message };
+                response.Errors = new Dictionary<string, string[]> { ["NotImplemented"] = new[] { notImplEx.Message } };
                 break;
 
             default:
@@ -88,15 +88,17 @@ public class GlobalExceptionHandlingMiddleware
 
                 if (_environment.IsDevelopment())
                 {
-                    response.Errors = new List<string>
+                    response.Errors = new Dictionary<string, string[]>
                     {
-                        exception.Message,
-                        exception.StackTrace ?? string.Empty
+                        ["Exception"] = new[] {
+                            exception.Message,
+                            exception.StackTrace ?? string.Empty
+                        }
                     };
                 }
                 else
                 {
-                    response.Errors = new List<string> { "An internal server error occurred" };
+                    response.Errors = new Dictionary<string, string[]> { ["Error"] = new[] { "An internal server error occurred" } };
                 }
                 break;
         }

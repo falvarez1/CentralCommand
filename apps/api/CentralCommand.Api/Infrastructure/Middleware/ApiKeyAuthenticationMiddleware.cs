@@ -88,7 +88,7 @@ public class ApiKeyAuthenticationMiddleware
         {
             Success = false,
             Message = message,
-            Errors = new List<string> { "Authentication failed" },
+            Errors = new Dictionary<string, string[]> { ["Authentication"] = new[] { "Authentication failed" } },
             Timestamp = DateTime.UtcNow
         };
 

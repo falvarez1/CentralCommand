@@ -116,7 +116,7 @@ public class StatisticsController : ControllerBase
             AverageResponseTime = statistics.AverageResponseTime,
             AverageUptime = statistics.AverageUptime,
             AverageErrorRate = statistics.AverageErrorRate,
-            TotalRequests = statistics.TotalRequests,
+            TotalRequests = (int)statistics.TotalRequests,
             PeakResponseTime = statistics.AverageResponseTime * 1.5, // Simulated
             MinResponseTime = statistics.AverageResponseTime * 0.5, // Simulated
             P95ResponseTime = statistics.AverageResponseTime * 1.3, // Simulated

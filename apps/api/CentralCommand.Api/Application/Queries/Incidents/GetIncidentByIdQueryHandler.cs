@@ -1,6 +1,5 @@
-using AutoMapper;
 using CentralCommand.Core.DTOs.Responses;
-using CentralCommand.Core.Interfaces.Repositories;
+using CentralCommand.Core.Extensions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -9,16 +8,13 @@ namespace CentralCommand.Api.Application.Queries.Incidents;
 public class GetIncidentByIdQueryHandler : IRequestHandler<GetIncidentByIdQuery, IncidentResponse?>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly ILogger<GetIncidentByIdQueryHandler> _logger;
 
     public GetIncidentByIdQueryHandler(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
         ILogger<GetIncidentByIdQueryHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
         _logger = logger;
     }
 
@@ -34,6 +30,6 @@ public class GetIncidentByIdQueryHandler : IRequestHandler<GetIncidentByIdQuery,
             return null;
         }
 
-        return _mapper.Map<IncidentResponse>(incident);
+        return incident.ToResponse();
     }
 }

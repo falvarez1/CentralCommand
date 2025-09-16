@@ -1,6 +1,6 @@
-using AutoMapper;
+using CentralCommand.Core.Domain.Enums;
 using CentralCommand.Core.DTOs.Responses;
-using CentralCommand.Core.Interfaces.Repositories;
+using CentralCommand.Core.Extensions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -9,16 +9,13 @@ namespace CentralCommand.Api.Application.Commands.Portals;
 public class UpdatePortalCommandHandler : IRequestHandler<UpdatePortalCommand, PortalResponse>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IMapper _mapper;
     private readonly ILogger<UpdatePortalCommandHandler> _logger;
 
     public UpdatePortalCommandHandler(
         IUnitOfWork unitOfWork,
-        IMapper mapper,
         ILogger<UpdatePortalCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _mapper = mapper;
         _logger = logger;
     }
 
@@ -45,8 +42,8 @@ public class UpdatePortalCommandHandler : IRequestHandler<UpdatePortalCommand, P
         if (request.Icon != null)
             portal.Icon = request.Icon;
 
-        if (request.Category != null)
-            portal.Category = request.Category;
+        if (request.Category.HasValue)
+            portal.Category = request.Category.Value;
 
         if (request.Environment.HasValue)
             portal.Environment = request.Environment.Value;
@@ -54,14 +51,14 @@ public class UpdatePortalCommandHandler : IRequestHandler<UpdatePortalCommand, P
         if (request.Priority.HasValue)
             portal.Priority = request.Priority.Value;
 
-        if (request.Owner != null)
-            portal.Owner = request.Owner;
+        if (request.Owner.HasValue)
+            portal.Owner = request.Owner.Value;
 
-        if (request.Team != null)
-            portal.Team = request.Team;
+        if (request.Team.HasValue)
+            portal.Team = request.Team.Value;
 
         if (request.Tags != null)
-            portal.Tags = request.Tags;
+            portal.SetTags(request.Tags);
 
         if (request.Config != null)
             portal.Config = request.Config;
@@ -73,6 +70,6 @@ public class UpdatePortalCommandHandler : IRequestHandler<UpdatePortalCommand, P
 
         _logger.LogInformation("Portal updated successfully: {Id}", portal.Id);
 
-        return _mapper.Map<PortalResponse>(portal);
+        return portal.ToResponse();
     }
 }

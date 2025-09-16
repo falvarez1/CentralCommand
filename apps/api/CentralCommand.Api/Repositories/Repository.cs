@@ -1,6 +1,5 @@
 using CentralCommand.Api.Infrastructure.Data;
 using CentralCommand.Core.Domain.Common;
-using CentralCommand.Core.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 

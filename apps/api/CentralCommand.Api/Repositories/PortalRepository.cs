@@ -1,8 +1,6 @@
 using CentralCommand.Api.Infrastructure.Data;
 using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
-using CentralCommand.Core.Domain.ValueObjects;
-using CentralCommand.Core.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace CentralCommand.Api.Repositories;
@@ -149,5 +147,17 @@ public class PortalRepository : Repository<Portal>, IPortalRepository
         }
 
         await UpdateRangeAsync(portals, cancellationToken);
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var portal = await GetByIdAsync(id, cancellationToken);
+        if (portal == null)
+        {
+            return false;
+        }
+
+        await base.DeleteAsync(portal, cancellationToken);
+        return true;
     }
 }
