@@ -77,40 +77,30 @@ export enum ErrorCode {
 }
 
 /**
- * Base API response schema
+ * Base API response schema - matches backend ApiResponse<T>
  */
 export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
   z.object({
-    status: z.nativeEnum(ApiStatus),
-    data: dataSchema.optional(),
-    error: z.object({
-      code: z.nativeEnum(ErrorCode),
-      message: z.string(),
-      details: z.record(z.any()).optional(),
-      severity: z.nativeEnum(ErrorSeverity).optional(),
-      timestamp: z.date(),
-      traceId: z.string().uuid().optional()
-    }).optional(),
-    metadata: z.object({
-      timestamp: z.date(),
-      requestId: z.string().uuid(),
-      version: z.string().optional(),
-      deprecation: z.object({
-        isDeprecated: z.boolean(),
-        message: z.string().optional(),
-        sunsetDate: z.date().optional()
-      }).optional()
-    }).optional()
+    success: z.boolean(),
+    data: dataSchema.optional().nullable(),
+    error: z.string().optional().nullable(),
+    message: z.string().optional().nullable(),
+    errors: z.record(z.array(z.string())).optional().nullable(),
+    timestamp: z.date(),
+    requestId: z.string().optional().nullable()
   });
 
 /**
- * Generic API response type
+ * Generic API response type - matches backend ApiResponse<T>
  */
 export type ApiResponse<T> = {
-  status: ApiStatus;
-  data?: T;
-  error?: ApiError;
-  metadata?: ApiMetadata;
+  success: boolean;
+  data?: T | null;
+  error?: string | null;
+  message?: string | null;
+  errors?: Record<string, string[]> | null;
+  timestamp: Date;
+  requestId?: string | null;
 };
 
 /**
@@ -175,36 +165,58 @@ export const PaginationRequestSchema = z.object({
 export interface PaginationRequest extends z.infer<typeof PaginationRequestSchema> {}
 
 /**
- * Pagination response metadata
+ * Pagination response metadata - matches backend PagedResult
  */
 export const PaginationResponseSchema = z.object({
   page: z.number().positive(),
+  pageNumber: z.number().positive(),
   pageSize: z.number().positive(),
   totalPages: z.number().nonnegative(),
-  totalItems: z.number().nonnegative(),
-  hasNext: z.boolean(),
-  hasPrevious: z.boolean(),
-  nextCursor: z.string().optional(),
-  previousCursor: z.string().optional()
+  totalCount: z.number().nonnegative(),
+  hasPreviousPage: z.boolean(),
+  hasNextPage: z.boolean()
 });
 
 export interface PaginationResponse extends z.infer<typeof PaginationResponseSchema> {}
 
 /**
- * Paginated API response
+ * Paginated API response - matches backend PagedResult<T>
  */
-export const PaginatedResponseSchema = <T extends z.ZodType>(itemSchema: T) =>
+export const PagedResultSchema = <T extends z.ZodType>(itemSchema: T) =>
   z.object({
     items: z.array(itemSchema),
-    pagination: PaginationResponseSchema,
-    metadata: ApiMetadataSchema.optional()
+    totalCount: z.number().nonnegative(),
+    pageNumber: z.number().positive(),
+    page: z.number().positive(),
+    pageSize: z.number().positive(),
+    totalPages: z.number().nonnegative(),
+    hasPreviousPage: z.boolean(),
+    hasNextPage: z.boolean()
   });
 
-export type PaginatedResponse<T> = {
+/**
+ * Paginated API response (alias for backward compatibility)
+ */
+export const PaginatedResponseSchema = PagedResultSchema;
+
+/**
+ * Paged result type - matches backend PagedResult<T>
+ */
+export type PagedResult<T> = {
   items: T[];
-  pagination: PaginationResponse;
-  metadata?: ApiMetadata;
+  totalCount: number;
+  pageNumber: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
 };
+
+/**
+ * Paginated response type (alias for backward compatibility)
+ */
+export type PaginatedResponse<T> = PagedResult<T>;
 
 /**
  * Batch operation request
@@ -223,19 +235,21 @@ export const BatchRequestSchema = <T extends z.ZodType>(operationSchema: T) =>
   });
 
 /**
- * Batch operation response
+ * Batch operation response - matches backend BatchOperationResult
  */
 export const BatchResponseSchema = <T extends z.ZodType>(resultSchema: T) =>
   z.object({
+    successCount: z.number().nonnegative(),
+    failureCount: z.number().nonnegative(),
+    totalCount: z.number().nonnegative(),
     results: z.array(z.object({
-      id: z.string(),
-      status: z.number(),
-      data: resultSchema.optional(),
-      error: ApiErrorSchema.optional()
+      portalId: z.string().uuid().optional(),
+      incidentId: z.string().uuid().optional(),
+      success: z.boolean(),
+      error: z.string().optional().nullable(),
+      data: resultSchema.optional()
     })),
-    succeeded: z.number().nonnegative(),
-    failed: z.number().nonnegative(),
-    duration: z.number().nonnegative() // in milliseconds
+    errors: z.record(z.string()).optional()
   });
 
 /**

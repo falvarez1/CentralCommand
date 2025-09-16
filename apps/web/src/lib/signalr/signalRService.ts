@@ -214,8 +214,8 @@ class SignalRService {
         await this.connection.invoke('SubscribeToPortals', portalIds);
       }
 
-      // Subscribe to system-wide updates
-      await this.connection.invoke('SubscribeToSystemUpdates');
+      // Subscribe to system-wide alerts
+      await this.connection.invoke('SubscribeToSystemAlerts');
     } catch (error) {
       console.error('Failed to subscribe to channels:', error);
     }

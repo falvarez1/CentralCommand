@@ -26,61 +26,61 @@ const generateMockIncidents = (): Incident[] => {
       title: 'Database connection timeout',
       description: 'PostgreSQL primary database experiencing connection timeouts',
       type: IncidentType.DATABASE,
-      severity: IncidentSeverity.HIGH
+      severity: IncidentSeverity.High
     },
     {
       title: 'API Gateway high latency',
       description: 'Response times exceeding 5 seconds for API endpoints',
       type: IncidentType.PERFORMANCE,
-      severity: IncidentSeverity.MEDIUM
+      severity: IncidentSeverity.Medium
     },
     {
       title: 'Security vulnerability detected',
       description: 'Critical CVE found in dependency package',
       type: IncidentType.SECURITY,
-      severity: IncidentSeverity.CRITICAL
+      severity: IncidentSeverity.Critical
     },
     {
       title: 'Kubernetes pod crashes',
       description: 'Multiple pod restarts in production cluster',
       type: IncidentType.INFRASTRUCTURE,
-      severity: IncidentSeverity.HIGH
+      severity: IncidentSeverity.High
     },
     {
       title: 'Payment service outage',
       description: 'Payment processing service returning 503 errors',
       type: IncidentType.SERVICE,
-      severity: IncidentSeverity.CRITICAL
+      severity: IncidentSeverity.Critical
     },
     {
       title: 'Network connectivity issues',
       description: 'Intermittent packet loss between data centers',
       type: IncidentType.NETWORK,
-      severity: IncidentSeverity.MEDIUM
+      severity: IncidentSeverity.Medium
     },
     {
       title: 'Storage capacity warning',
       description: 'Primary storage cluster at 85% capacity',
       type: IncidentType.INFRASTRUCTURE,
-      severity: IncidentSeverity.LOW
+      severity: IncidentSeverity.Low
     },
     {
       title: 'Authentication service degraded',
       description: 'OAuth provider experiencing intermittent failures',
       type: IncidentType.SERVICE,
-      severity: IncidentSeverity.HIGH
+      severity: IncidentSeverity.High
     },
     {
       title: 'Memory leak detected',
       description: 'Application server memory usage continuously increasing',
       type: IncidentType.PERFORMANCE,
-      severity: IncidentSeverity.MEDIUM
+      severity: IncidentSeverity.Medium
     },
     {
       title: 'SSL certificate expiring',
       description: 'Production SSL certificate expires in 7 days',
       type: IncidentType.SECURITY,
-      severity: IncidentSeverity.LOW
+      severity: IncidentSeverity.Low
     }
   ];
 
@@ -95,7 +95,7 @@ const generateMockIncidents = (): Incident[] => {
       description: template.description,
       type: template.type,
       severity: template.severity,
-      status: isResolved ? IncidentStatus.RESOLVED : statuses[Math.floor(Math.random() * 3)],
+      status: isResolved ? IncidentStatus.Resolved : statuses[Math.floor(Math.random() * 3)],
       affectedPortals: [uuidv4()],
       affectedServices: [`service-${index}`, `service-${index + 10}`],
       impactedUsers: Math.floor(Math.random() * 1000),
@@ -128,7 +128,7 @@ const generateMockIncidents = (): Incident[] => {
       notifications: {
         emailSent: true,
         slackSent: true,
-        smsSent: template.severity === IncidentSeverity.CRITICAL,
+        smsSent: template.severity === IncidentSeverity.Critical,
         teamsNotified: [uuidv4()]
       },
       relatedIncidents: index > 0 ? [uuidv4()] : [],
@@ -269,7 +269,7 @@ export const useIncidentStore = create<IncidentState>()(
             }
 
             // Unresolved filter
-            if (filter.isUnresolved && incident.status === IncidentStatus.RESOLVED) {
+            if (filter.isUnresolved && incident.status === IncidentStatus.Resolved) {
               return false;
             }
 
@@ -290,16 +290,16 @@ export const useIncidentStore = create<IncidentState>()(
 
           const stats: IncidentStats = {
             total: incidents.length,
-            open: incidents.filter(i => i.status === IncidentStatus.OPEN).length,
-            investigating: incidents.filter(i => i.status === IncidentStatus.INVESTIGATING).length,
-            identified: incidents.filter(i => i.status === IncidentStatus.IDENTIFIED).length,
-            monitoring: incidents.filter(i => i.status === IncidentStatus.MONITORING).length,
-            resolved: incidents.filter(i => i.status === IncidentStatus.RESOLVED).length,
+            open: incidents.filter(i => i.status === IncidentStatus.Open).length,
+            inProgress: incidents.filter(i => i.status === IncidentStatus.InProgress).length,
+            acknowledged: incidents.filter(i => i.status === IncidentStatus.Acknowledged).length,
+            resolved: incidents.filter(i => i.status === IncidentStatus.Resolved).length,
+            closed: incidents.filter(i => i.status === IncidentStatus.Closed).length,
             bySeverity: {
-              [IncidentSeverity.CRITICAL]: incidents.filter(i => i.severity === IncidentSeverity.CRITICAL).length,
-              [IncidentSeverity.HIGH]: incidents.filter(i => i.severity === IncidentSeverity.HIGH).length,
-              [IncidentSeverity.MEDIUM]: incidents.filter(i => i.severity === IncidentSeverity.MEDIUM).length,
-              [IncidentSeverity.LOW]: incidents.filter(i => i.severity === IncidentSeverity.LOW).length
+              [IncidentSeverity.Critical]: incidents.filter(i => i.severity === IncidentSeverity.Critical).length,
+              [IncidentSeverity.High]: incidents.filter(i => i.severity === IncidentSeverity.High).length,
+              [IncidentSeverity.Medium]: incidents.filter(i => i.severity === IncidentSeverity.Medium).length,
+              [IncidentSeverity.Low]: incidents.filter(i => i.severity === IncidentSeverity.Low).length
             },
             byType: {} as Record<IncidentType, number>,
             last24Hours: incidents.filter(i => i.createdAt > last24h).length,
@@ -314,7 +314,7 @@ export const useIncidentStore = create<IncidentState>()(
           });
 
           // Calculate average MTTR and MTBF
-          const resolvedIncidents = incidents.filter(i => i.status === IncidentStatus.RESOLVED && i.metrics?.mttr);
+          const resolvedIncidents = incidents.filter(i => i.status === IncidentStatus.Resolved && i.metrics?.mttr);
           if (resolvedIncidents.length > 0) {
             stats.averageMTTR = resolvedIncidents.reduce((sum, i) => sum + (i.metrics?.mttr || 0), 0) / resolvedIncidents.length;
           }
@@ -328,7 +328,7 @@ export const useIncidentStore = create<IncidentState>()(
         },
 
         get activeIncidents() {
-          return get().incidents.filter(i => i.status !== IncidentStatus.RESOLVED);
+          return get().incidents.filter(i => i.status !== IncidentStatus.Resolved);
         },
 
         get recentIncidents() {
@@ -348,7 +348,7 @@ export const useIncidentStore = create<IncidentState>()(
             description: input.description,
             type: input.type,
             severity: input.severity,
-            status: input.status || IncidentStatus.OPEN,
+            status: input.status || IncidentStatus.Open,
             affectedPortals: input.affectedPortals || [],
             affectedServices: input.affectedServices || [],
             impactedUsers: input.impactedUsers || 0,
@@ -426,7 +426,7 @@ export const useIncidentStore = create<IncidentState>()(
           const incident = state.incidents.find(i => i.id === id);
           if (incident) {
             incident.acknowledgedAt = new Date();
-            incident.status = IncidentStatus.INVESTIGATING;
+            incident.status = IncidentStatus.Acknowledged;
             incident.updatedAt = new Date();
             get().addTimelineEntry(id, 'Incident acknowledged', 'Team has begun investigating the issue');
           }
@@ -436,7 +436,7 @@ export const useIncidentStore = create<IncidentState>()(
           const incident = state.incidents.find(i => i.id === id);
           if (incident) {
             const now = new Date();
-            incident.status = IncidentStatus.RESOLVED;
+            incident.status = IncidentStatus.Resolved;
             incident.resolvedAt = now;
             incident.resolution = resolution;
             incident.rootCause = rootCause;
@@ -456,8 +456,8 @@ export const useIncidentStore = create<IncidentState>()(
 
         escalateIncident: (id) => set(state => {
           const incident = state.incidents.find(i => i.id === id);
-          if (incident && incident.severity !== IncidentSeverity.CRITICAL) {
-            const severityOrder = [IncidentSeverity.LOW, IncidentSeverity.MEDIUM, IncidentSeverity.HIGH, IncidentSeverity.CRITICAL];
+          if (incident && incident.severity !== IncidentSeverity.Critical) {
+            const severityOrder = [IncidentSeverity.Low, IncidentSeverity.Medium, IncidentSeverity.High, IncidentSeverity.Critical];
             const currentIndex = severityOrder.indexOf(incident.severity);
             if (currentIndex < severityOrder.length - 1) {
               incident.severity = severityOrder[currentIndex + 1];
@@ -470,8 +470,8 @@ export const useIncidentStore = create<IncidentState>()(
 
         reopenIncident: (id) => set(state => {
           const incident = state.incidents.find(i => i.id === id);
-          if (incident && incident.status === IncidentStatus.RESOLVED) {
-            incident.status = IncidentStatus.OPEN;
+          if (incident && incident.status === IncidentStatus.Resolved) {
+            incident.status = IncidentStatus.Open;
             incident.resolvedAt = undefined;
             incident.resolution = undefined;
             incident.updatedAt = new Date();

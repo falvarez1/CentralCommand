@@ -55,9 +55,9 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
   const [formData, setFormData] = useState<Partial<CreateIncidentInput>>({
     title: '',
     description: '',
-    severity: IncidentSeverity.WARNING,
+    severity: IncidentSeverity.Medium,
     type: IncidentType.SERVICE,
-    status: IncidentStatus.OPEN,
+    status: IncidentStatus.Open,
     affectedPortals: [],
     affectedServices: [],
     impactedUsers: 0,
@@ -215,19 +215,19 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={IncidentSeverity.CRITICAL}>
+                  <SelectItem value={IncidentSeverity.Critical}>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-red-500" />
                       Critical
                     </div>
                   </SelectItem>
-                  <SelectItem value={IncidentSeverity.WARNING}>
+                  <SelectItem value={IncidentSeverity.Medium}>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-yellow-500" />
                       Warning
                     </div>
                   </SelectItem>
-                  <SelectItem value={IncidentSeverity.INFO}>
+                  <SelectItem value={IncidentSeverity.Low}>
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                       Info

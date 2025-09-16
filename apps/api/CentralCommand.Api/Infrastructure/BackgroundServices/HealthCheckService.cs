@@ -1,3 +1,4 @@
+using CentralCommand.Api.Infrastructure.Services;
 using CentralCommand.Core.Interfaces.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -51,7 +52,7 @@ public class HealthCheckService : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var portalService = scope.ServiceProvider.GetRequiredService<IPortalService>();
-        var healthCheckService = scope.ServiceProvider.GetService<HealthCheckService>();
+        var metricsCollector = scope.ServiceProvider.GetRequiredService<IMetricsCollector>();
 
         _logger.LogDebug("Starting health check cycle");
 

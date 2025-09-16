@@ -19,7 +19,7 @@ interface IncidentCardProps {
 }
 
 const severityConfig = {
-  [IncidentSeverity.CRITICAL]: {
+  [IncidentSeverity.Critical]: {
     icon: AlertCircle,
     color: 'text-red-500',
     bgColor: 'bg-red-50 dark:bg-red-950',
@@ -27,7 +27,15 @@ const severityConfig = {
     barColor: 'bg-red-500',
     badge: 'destructive' as const
   },
-  [IncidentSeverity.WARNING]: {
+  [IncidentSeverity.High]: {
+    icon: AlertTriangle,
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-50 dark:bg-orange-950',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    barColor: 'bg-orange-500',
+    badge: 'warning' as const
+  },
+  [IncidentSeverity.Medium]: {
     icon: AlertTriangle,
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-50 dark:bg-yellow-950',
@@ -35,31 +43,22 @@ const severityConfig = {
     barColor: 'bg-yellow-500',
     badge: 'warning' as const
   },
-  [IncidentSeverity.INFO]: {
+  [IncidentSeverity.Low]: {
     icon: Info,
     color: 'text-blue-500',
     bgColor: 'bg-blue-50 dark:bg-blue-950',
     borderColor: 'border-blue-200 dark:border-blue-800',
     barColor: 'bg-blue-500',
     badge: 'default' as const
-  },
-  [IncidentSeverity.SUCCESS]: {
-    icon: CheckCircle,
-    color: 'text-green-500',
-    bgColor: 'bg-green-50 dark:bg-green-950',
-    borderColor: 'border-green-200 dark:border-green-800',
-    barColor: 'bg-green-500',
-    badge: 'success' as const
   }
 };
 
 const statusConfig = {
-  [IncidentStatus.OPEN]: { label: 'Open', color: 'text-red-600 dark:text-red-400' },
-  [IncidentStatus.INVESTIGATING]: { label: 'Investigating', color: 'text-yellow-600 dark:text-yellow-400' },
-  [IncidentStatus.IDENTIFIED]: { label: 'Identified', color: 'text-blue-600 dark:text-blue-400' },
-  [IncidentStatus.MONITORING]: { label: 'Monitoring', color: 'text-indigo-600 dark:text-indigo-400' },
-  [IncidentStatus.RESOLVED]: { label: 'Resolved', color: 'text-green-600 dark:text-green-400' },
-  [IncidentStatus.CLOSED]: { label: 'Closed', color: 'text-gray-600 dark:text-gray-400' }
+  [IncidentStatus.Open]: { label: 'Open', color: 'text-red-600 dark:text-red-400' },
+  [IncidentStatus.InProgress]: { label: 'In Progress', color: 'text-yellow-600 dark:text-yellow-400' },
+  [IncidentStatus.Acknowledged]: { label: 'Acknowledged', color: 'text-blue-600 dark:text-blue-400' },
+  [IncidentStatus.Resolved]: { label: 'Resolved', color: 'text-green-600 dark:text-green-400' },
+  [IncidentStatus.Closed]: { label: 'Closed', color: 'text-gray-600 dark:text-gray-400' }
 };
 
 export const IncidentCard: React.FC<IncidentCardProps> = ({
@@ -71,12 +70,12 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
   className
 }) => {
   const { acknowledgeIncident, resolveIncident, escalateIncident } = useIncidentStore();
-  const config = severityConfig[incident.severity] || severityConfig[IncidentSeverity.INFO];
+  const config = severityConfig[incident.severity] || severityConfig[IncidentSeverity.Low];
   const StatusIcon = config.icon;
-  const statusInfo = statusConfig[incident.status];
+  const statusInfo = statusConfig[incident.status] || { label: incident.status, color: 'text-gray-600 dark:text-gray-400' };
 
   const handleInvestigate = () => {
-    if (incident.status === IncidentStatus.OPEN) {
+    if (incident.status === IncidentStatus.Open) {
       acknowledgeIncident(incident.id);
       toast.success('Incident acknowledged', {
         description: 'Investigation has begun'
@@ -86,7 +85,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
   };
 
   const handleResolve = () => {
-    if (incident.status !== IncidentStatus.RESOLVED) {
+    if (incident.status !== IncidentStatus.Resolved) {
       // In a real app, would open a modal to get resolution details
       resolveIncident(incident.id, 'Issue has been resolved', 'Root cause identified and fixed');
       toast.success('Incident resolved', {
@@ -180,7 +179,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-2">
             <div className="flex gap-2">
-              {incident.status === IncidentStatus.OPEN && (
+              {incident.status === IncidentStatus.Open && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -191,7 +190,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
                   Investigate
                 </Button>
               )}
-              {incident.status !== IncidentStatus.RESOLVED && incident.status !== IncidentStatus.CLOSED && (
+              {incident.status !== IncidentStatus.Resolved && incident.status !== IncidentStatus.Closed && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -202,7 +201,7 @@ export const IncidentCard: React.FC<IncidentCardProps> = ({
                   Resolve
                 </Button>
               )}
-              {incident.severity !== IncidentSeverity.CRITICAL && incident.status !== IncidentStatus.RESOLVED && (
+              {incident.severity !== IncidentSeverity.Critical && incident.status !== IncidentStatus.Resolved && (
                 <Button
                   size="sm"
                   variant="outline"

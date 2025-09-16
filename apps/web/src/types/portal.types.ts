@@ -1,64 +1,65 @@
 import { z } from 'zod';
 
 /**
- * Portal status enum
+ * Portal status enum - matches backend PortalStatus
  */
 export enum PortalStatus {
-  OPERATIONAL = 'operational',
-  DEGRADED = 'degraded',
-  MAINTENANCE = 'maintenance',
-  OUTAGE = 'outage'
+  Operational = 'Operational',
+  Degraded = 'Degraded',
+  Maintenance = 'Maintenance',
+  Outage = 'Outage',
+  Unknown = 'Unknown'
 }
 
 /**
- * Portal environment types
+ * Portal environment types - matches backend PortalEnvironment
  */
 export enum PortalEnvironment {
-  PRODUCTION = 'production',
-  STAGING = 'staging',
-  DEVELOPMENT = 'development',
-  TESTING = 'testing'
+  Production = 'Production',
+  Staging = 'Staging',
+  Development = 'Development',
+  Testing = 'Testing'
 }
 
 /**
- * Portal priority levels
+ * Portal priority levels - matches backend PortalPriority
  */
 export enum PortalPriority {
-  CRITICAL = 'critical',
-  HIGH = 'high',
-  MEDIUM = 'medium',
-  LOW = 'low'
+  Critical = 'Critical',
+  High = 'High',
+  Medium = 'Medium',
+  Low = 'Low'
 }
 
 /**
- * Authentication types
+ * Authentication types - matches backend AuthType
  */
 export enum AuthType {
-  NONE = 'none',
-  BASIC = 'basic',
-  OAUTH = 'oauth',
-  SAML = 'saml',
-  API_KEY = 'api_key',
-  JWT = 'jwt'
+  None = 'None',
+  Basic = 'Basic',
+  OAuth = 'OAuth',
+  SAML = 'SAML',
+  ApiKey = 'ApiKey',
+  JWT = 'JWT'
 }
 
 /**
- * Portal categories
+ * Portal categories - matches backend PortalCategory
  */
 export enum PortalCategory {
-  ALL = 'all',
-  ENGINEERING = 'engineering',
-  OPERATIONS = 'operations',
-  SUPPORT = 'support',
-  MONITORING = 'monitoring',
-  ANALYTICS = 'analytics',
-  SERVICES = 'services',
-  INFRASTRUCTURE = 'infrastructure',
-  DATABASES = 'databases',
-  SECURITY = 'security',
-  DEVELOPMENT = 'development',
-  BUSINESS = 'business',
-  COMMUNICATION = 'communication'
+  All = 'All',
+  Engineering = 'Engineering',
+  Operations = 'Operations',
+  Support = 'Support',
+  Monitoring = 'Monitoring',
+  Analytics = 'Analytics',
+  Services = 'Services',
+  Infrastructure = 'Infrastructure',
+  Databases = 'Databases',
+  Security = 'Security',
+  Development = 'Development',
+  Business = 'Business',
+  Communication = 'Communication'
 }
 
 /**
@@ -73,7 +74,12 @@ export const PortalMetricsSchema = z.object({
   errors: z.number().nonnegative(),
   errorRate: z.number().min(0).max(100),
   throughput: z.number().nonnegative(),
-  latency: z.number().nonnegative()
+  latency: z.number().nonnegative(),
+  requestsPerMinute: z.number().nonnegative().optional(),
+  averageLoadTime: z.number().nonnegative().optional(),
+  peakResponseTime: z.number().nonnegative().optional(),
+  timestamp: z.date().optional(),
+  lastUpdated: z.date().optional()
 });
 
 export interface PortalMetrics extends z.infer<typeof PortalMetricsSchema> {}
@@ -100,43 +106,50 @@ export interface PortalConfig extends z.infer<typeof PortalConfigSchema> {}
  */
 export const PortalSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
+  name: z.string().min(1).max(200),
+  description: z.string().max(1000).optional().nullable(),
   url: z.string().url(),
   category: z.nativeEnum(PortalCategory),
   status: z.nativeEnum(PortalStatus),
-  environment: z.nativeEnum(PortalEnvironment).default(PortalEnvironment.PRODUCTION),
-  priority: z.nativeEnum(PortalPriority).default(PortalPriority.MEDIUM),
+  environment: z.nativeEnum(PortalEnvironment).default(PortalEnvironment.Production),
+  priority: z.nativeEnum(PortalPriority).default(PortalPriority.Medium),
 
   // Authentication
-  authType: z.nativeEnum(AuthType).default(AuthType.NONE),
+  authType: z.nativeEnum(AuthType).default(AuthType.None),
   authConfig: z.record(z.any()).optional(),
 
   // Metrics
   metrics: PortalMetricsSchema,
   lastChecked: z.date(),
-  lastIncident: z.date().optional(),
+  lastIncident: z.date().optional().nullable(),
+  lastStatusChange: z.date().optional().nullable(),
+  statusReason: z.string().max(500).optional().nullable(),
 
   // Configuration
   config: PortalConfigSchema.default({}),
 
   // UI properties
-  icon: z.string().optional(),
-  color: z.string().optional(),
+  icon: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
   tags: z.array(z.string()).default([]),
   isFavorite: z.boolean().default(false),
   isPublic: z.boolean().default(false),
 
   // Ownership
-  owner: z.string().uuid().optional(),
-  team: z.string().uuid().optional(),
+  owner: z.string().uuid().optional().nullable(),
+  team: z.string().uuid().optional().nullable(),
   maintainers: z.array(z.string().uuid()).default([]),
 
   // Metadata
   createdAt: z.date(),
   updatedAt: z.date(),
   createdBy: z.string().uuid(),
-  updatedBy: z.string().uuid()
+  updatedBy: z.string().uuid(),
+  eTag: z.string().optional(),
+  metricsHistory: z.array(z.object({
+    timestamp: z.date(),
+    metrics: PortalMetricsSchema
+  })).optional()
 });
 
 /**
@@ -236,3 +249,63 @@ export const BulkOperationSchema = z.object({
 });
 
 export interface BulkOperation extends z.infer<typeof BulkOperationSchema> {}
+
+/**
+ * Portal summary for list views - matches backend PortalSummaryResponse
+ */
+export const PortalSummarySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  url: z.string().url(),
+  category: z.nativeEnum(PortalCategory),
+  status: z.nativeEnum(PortalStatus),
+  environment: z.nativeEnum(PortalEnvironment),
+  priority: z.nativeEnum(PortalPriority),
+  uptime: z.number().min(0).max(100),
+  responseTime: z.number().nonnegative(),
+  lastChecked: z.date(),
+  icon: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
+  isFavorite: z.boolean()
+});
+
+export interface PortalSummary extends z.infer<typeof PortalSummarySchema> {}
+
+/**
+ * Batch operation result - matches backend BatchOperationResult
+ */
+export const BatchOperationResultSchema = z.object({
+  successCount: z.number().nonnegative(),
+  failureCount: z.number().nonnegative(),
+  totalCount: z.number().nonnegative(),
+  results: z.array(z.object({
+    portalId: z.string().uuid(),
+    success: z.boolean(),
+    error: z.string().optional().nullable()
+  })),
+  errors: z.record(z.string()).optional()
+});
+
+export interface BatchOperationResult extends z.infer<typeof BatchOperationResultSchema> {}
+
+/**
+ * Portal health check response
+ */
+export const PortalHealthCheckSchema = z.object({
+  portalId: z.string().uuid(),
+  portalName: z.string(),
+  endpoint: z.string(),
+  isEnabled: z.boolean(),
+  lastChecked: z.date().optional().nullable(),
+  lastStatus: z.nativeEnum(PortalStatus).optional().nullable(),
+  lastResponseTime: z.number().optional().nullable(),
+  lastError: z.string().optional().nullable(),
+  consecutiveFailures: z.number().nonnegative(),
+  isHealthy: z.boolean(),
+  status: z.string(),
+  responseTime: z.number().nonnegative(),
+  uptime: z.number().min(0).max(100),
+  errorRate: z.number().min(0).max(100)
+});
+
+export interface PortalHealthCheck extends z.infer<typeof PortalHealthCheckSchema> {}

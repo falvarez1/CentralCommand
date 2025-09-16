@@ -64,11 +64,11 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
     // Apply tab filter
     if (activeTab === 'active') {
       filtered = filtered.filter(i =>
-        i.status !== IncidentStatus.RESOLVED && i.status !== IncidentStatus.CLOSED
+        i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed
       );
     } else if (activeTab === 'resolved') {
       filtered = filtered.filter(i =>
-        i.status === IncidentStatus.RESOLVED || i.status === IncidentStatus.CLOSED
+        i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed
       );
     }
 
@@ -130,7 +130,7 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
 
   const handleBulkResolve = () => {
     const unresolvedCount = displayIncidents.filter(i =>
-      i.status !== IncidentStatus.RESOLVED && i.status !== IncidentStatus.CLOSED
+      i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed
     ).length;
 
     if (unresolvedCount === 0) {
@@ -145,10 +145,10 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
   };
 
   const severityFilters = [
-    { value: IncidentSeverity.CRITICAL, label: 'Critical', color: 'bg-red-500' },
-    { value: IncidentSeverity.WARNING, label: 'Warning', color: 'bg-yellow-500' },
-    { value: IncidentSeverity.INFO, label: 'Info', color: 'bg-blue-500' },
-    { value: IncidentSeverity.SUCCESS, label: 'Success', color: 'bg-green-500' }
+    { value: IncidentSeverity.Critical, label: 'Critical', color: 'bg-red-500' },
+    { value: IncidentSeverity.Medium, label: 'Warning', color: 'bg-yellow-500' },
+    { value: IncidentSeverity.Low, label: 'Info', color: 'bg-blue-500' },
+    { value: IncidentSeverity.Low, label: 'Success', color: 'bg-green-500' }
   ];
 
   return (
@@ -281,7 +281,7 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
                 ))}
               </div>
               {displayIncidents.filter(i =>
-                i.status !== IncidentStatus.RESOLVED && i.status !== IncidentStatus.CLOSED
+                i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed
               ).length > 0 && (
                 <Button
                   size="sm"
@@ -301,7 +301,7 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
                   Active
                   <Badge variant="secondary" className="ml-2">
                     {incidents.filter(i =>
-                      i.status !== IncidentStatus.RESOLVED && i.status !== IncidentStatus.CLOSED
+                      i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed
                     ).length}
                   </Badge>
                 </TabsTrigger>
@@ -309,7 +309,7 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
                   Resolved
                   <Badge variant="secondary" className="ml-2">
                     {incidents.filter(i =>
-                      i.status === IncidentStatus.RESOLVED || i.status === IncidentStatus.CLOSED
+                      i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed
                     ).length}
                   </Badge>
                 </TabsTrigger>

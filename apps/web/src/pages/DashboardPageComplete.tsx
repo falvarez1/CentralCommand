@@ -80,7 +80,7 @@ export const DashboardPageComplete: React.FC = () => {
     onIncidentCreated: (incident) => {
       // Invalidate incident queries
       queryClient.invalidateQueries({ queryKey: ['incidents'] })
-      if (incident.severity === IncidentSeverity.CRITICAL) {
+      if (incident.severity === IncidentSeverity.Critical) {
         showWarning('Critical Incident', incident.title, {
           action: {
             label: 'View Details',
@@ -147,7 +147,7 @@ export const DashboardPageComplete: React.FC = () => {
 
   // Filter and analysis
   const criticalIncidents = incidents.filter(
-    i => i.severity === IncidentSeverity.CRITICAL && i.status !== 'resolved'
+    i => i.severity === IncidentSeverity.Critical && i.status !== 'resolved'
   )
 
   const problematicPortals = portals.filter(

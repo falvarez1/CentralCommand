@@ -34,17 +34,17 @@ interface IncidentTimelineProps {
 type FilterType = 'all' | 'critical' | 'resolved' | 'pending';
 
 const severityIcons = {
-  [IncidentSeverity.CRITICAL]: AlertCircle,
-  [IncidentSeverity.WARNING]: AlertTriangle,
-  [IncidentSeverity.INFO]: Info,
-  [IncidentSeverity.SUCCESS]: CheckCircle
+  [IncidentSeverity.Critical]: AlertCircle,
+  [IncidentSeverity.Medium]: AlertTriangle,
+  [IncidentSeverity.Low]: Info,
+  [IncidentSeverity.Low]: CheckCircle
 };
 
 const severityColors = {
-  [IncidentSeverity.CRITICAL]: 'text-red-500 dark:text-red-400',
-  [IncidentSeverity.WARNING]: 'text-yellow-500 dark:text-yellow-400',
-  [IncidentSeverity.INFO]: 'text-blue-500 dark:text-blue-400',
-  [IncidentSeverity.SUCCESS]: 'text-green-500 dark:text-green-400'
+  [IncidentSeverity.Critical]: 'text-red-500 dark:text-red-400',
+  [IncidentSeverity.Medium]: 'text-yellow-500 dark:text-yellow-400',
+  [IncidentSeverity.Low]: 'text-blue-500 dark:text-blue-400',
+  [IncidentSeverity.Low]: 'text-green-500 dark:text-green-400'
 };
 
 const typeIcons = {
@@ -59,12 +59,12 @@ const typeIcons = {
 };
 
 const statusColors = {
-  [IncidentStatus.OPEN]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  [IncidentStatus.INVESTIGATING]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  [IncidentStatus.IDENTIFIED]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  [IncidentStatus.MONITORING]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
-  [IncidentStatus.RESOLVED]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  [IncidentStatus.CLOSED]: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+  [IncidentStatus.Open]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  [IncidentStatus.InProgress]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  [IncidentStatus.Acknowledged]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  [IncidentStatus.InProgress]: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  [IncidentStatus.Resolved]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  [IncidentStatus.Closed]: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
 };
 
 export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
@@ -82,11 +82,11 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
   const getFilteredIncidents = () => {
     switch (activeFilter) {
       case 'critical':
-        return incidents.filter(i => i.severity === IncidentSeverity.CRITICAL);
+        return incidents.filter(i => i.severity === IncidentSeverity.Critical);
       case 'resolved':
-        return incidents.filter(i => i.status === IncidentStatus.RESOLVED || i.status === IncidentStatus.CLOSED);
+        return incidents.filter(i => i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed);
       case 'pending':
-        return incidents.filter(i => i.status !== IncidentStatus.RESOLVED && i.status !== IncidentStatus.CLOSED);
+        return incidents.filter(i => i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed);
       default:
         return incidents;
     }
@@ -96,9 +96,9 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
 
   const filterButtons = [
     { id: 'all' as FilterType, label: 'All', count: incidents.length },
-    { id: 'critical' as FilterType, label: 'Critical', count: incidents.filter(i => i.severity === IncidentSeverity.CRITICAL).length },
-    { id: 'resolved' as FilterType, label: 'Resolved', count: incidents.filter(i => i.status === IncidentStatus.RESOLVED || i.status === IncidentStatus.CLOSED).length },
-    { id: 'pending' as FilterType, label: 'Pending', count: incidents.filter(i => i.status !== IncidentStatus.RESOLVED && i.status !== IncidentStatus.CLOSED).length }
+    { id: 'critical' as FilterType, label: 'Critical', count: incidents.filter(i => i.severity === IncidentSeverity.Critical).length },
+    { id: 'resolved' as FilterType, label: 'Resolved', count: incidents.filter(i => i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed).length },
+    { id: 'pending' as FilterType, label: 'Pending', count: incidents.filter(i => i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed).length }
   ];
 
   return (
@@ -146,7 +146,7 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
             displayIncidents.map((incident, index) => {
               const SeverityIcon = severityIcons[incident.severity];
               const TypeIcon = typeIcons[incident.type];
-              const isResolved = incident.status === IncidentStatus.RESOLVED || incident.status === IncidentStatus.CLOSED;
+              const isResolved = incident.status === IncidentStatus.Resolved || incident.status === IncidentStatus.Closed;
 
               return (
                 <div key={incident.id} className="relative">

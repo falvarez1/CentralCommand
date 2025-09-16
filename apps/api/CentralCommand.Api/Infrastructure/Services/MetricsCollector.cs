@@ -9,12 +9,14 @@ namespace CentralCommand.Api.Infrastructure.Services;
 public class MetricsCollector : IMetricsCollector
 {
     private readonly ILogger<MetricsCollector> _logger;
+    private readonly HttpClient _httpClient;
     private readonly Meter _meter;
     private readonly Dictionary<string, Counter<long>> _counters = new();
     private readonly Dictionary<string, Histogram<double>> _histograms = new();
 
-    public MetricsCollector(ILogger<MetricsCollector> logger)
+    public MetricsCollector(HttpClient httpClient, ILogger<MetricsCollector> logger)
     {
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _meter = new Meter("CentralCommand.Api", "1.0.0");
     }
@@ -133,8 +135,7 @@ public class MetricsCollector : IMetricsCollector
     {
         try
         {
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var response = await httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(url, cancellationToken);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)

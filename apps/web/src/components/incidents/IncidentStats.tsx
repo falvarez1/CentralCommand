@@ -27,25 +27,25 @@ interface IncidentStatsProps {
 }
 
 const severityConfig = {
-  [IncidentSeverity.CRITICAL]: {
+  [IncidentSeverity.Critical]: {
     icon: AlertCircle,
     color: 'text-red-500',
     bgColor: 'bg-red-100 dark:bg-red-950',
     label: 'Critical'
   },
-  [IncidentSeverity.WARNING]: {
+  [IncidentSeverity.Medium]: {
     icon: AlertTriangle,
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-100 dark:bg-yellow-950',
     label: 'Warning'
   },
-  [IncidentSeverity.INFO]: {
+  [IncidentSeverity.Low]: {
     icon: Info,
     color: 'text-blue-500',
     bgColor: 'bg-blue-100 dark:bg-blue-950',
     label: 'Info'
   },
-  [IncidentSeverity.SUCCESS]: {
+  [IncidentSeverity.Low]: {
     icon: CheckCircle,
     color: 'text-green-500',
     bgColor: 'bg-green-100 dark:bg-green-950',

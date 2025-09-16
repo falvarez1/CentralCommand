@@ -90,7 +90,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
   position = 'top-right',
   maxNotifications = 5,
-  soundEnabled: defaultSoundEnabled = true,
+  soundEnabled: defaultSoundEnabled = false,
   browserNotificationsEnabled: defaultBrowserEnabled = false
 }) => {
   const { preferences, addNotification } = useUIStore();

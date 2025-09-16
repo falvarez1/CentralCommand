@@ -1,13 +1,31 @@
 import { z } from 'zod';
 
 /**
- * Time range options for metrics
+ * Time range options for metrics - matches backend TimeRange
  */
 export enum TimeRange {
-  ONE_HOUR = '1H',
-  TWENTY_FOUR_HOURS = '24H',
-  SEVEN_DAYS = '7D',
-  THIRTY_DAYS = '30D'
+  OneHour = 'OneHour',
+  TwentyFourHours = 'TwentyFourHours',
+  SevenDays = 'SevenDays',
+  ThirtyDays = 'ThirtyDays',
+  Hour = 'OneHour',
+  Day = 'TwentyFourHours',
+  Week = 'SevenDays',
+  Month = 'ThirtyDays',
+  // Legacy aliases for backward compatibility
+  ONE_HOUR = 'OneHour',
+  TWENTY_FOUR_HOURS = 'TwentyFourHours',
+  SEVEN_DAYS = 'SevenDays',
+  THIRTY_DAYS = 'ThirtyDays'
+}
+
+/**
+ * Metric trend direction - matches backend MetricTrend
+ */
+export enum MetricTrend {
+  Up = 'Up',
+  Down = 'Down',
+  Stable = 'Stable'
 }
 
 /**
@@ -61,7 +79,7 @@ export const MetricDataSchema = z.object({
   aggregationType: z.nativeEnum(AggregationType).default(AggregationType.AVERAGE),
   unit: z.string().optional(),
   threshold: z.number().optional(),
-  trend: z.enum(['up', 'down', 'stable']).optional()
+  trend: z.nativeEnum(MetricTrend).optional()
 });
 
 /**
@@ -207,3 +225,91 @@ export const HealthCheckResultSchema = z.object({
 });
 
 export interface HealthCheckResult extends z.infer<typeof HealthCheckResultSchema> {}
+
+/**
+ * Main statistics response - matches backend StatisticsResponse
+ */
+export const StatisticsResponseSchema = z.object({
+  stats: SystemStatsSchema,
+  portalStats: z.object({
+    total: z.number().nonnegative(),
+    active: z.number().nonnegative(),
+    degraded: z.number().nonnegative(),
+    down: z.number().nonnegative(),
+    maintenance: z.number().nonnegative(),
+    unknown: z.number().nonnegative(),
+    byCategory: z.record(z.number()),
+    byEnvironment: z.record(z.number()),
+    byPriority: z.record(z.number()),
+    averageUptime: z.number().min(0).max(100),
+    averageResponseTime: z.number().nonnegative(),
+    byStatus: z.record(z.number()),
+    averageMetrics: z.record(z.number())
+  }),
+  incidentStats: z.object({
+    total: z.number().nonnegative(),
+    open: z.number().nonnegative(),
+    inProgress: z.number().nonnegative(),
+    resolved: z.number().nonnegative(),
+    closed: z.number().nonnegative(),
+    acknowledgedIncidents: z.number().nonnegative(),
+    criticalIncidents: z.number().nonnegative(),
+    highIncidents: z.number().nonnegative(),
+    mediumIncidents: z.number().nonnegative(),
+    lowIncidents: z.number().nonnegative(),
+    bySeverity: z.record(z.number()),
+    byType: z.record(z.number()),
+    last24Hours: z.number().nonnegative(),
+    last7Days: z.number().nonnegative(),
+    averageMTTR: z.number().nonnegative(),
+    averageMTBF: z.number().nonnegative()
+  }),
+  sparklines: z.record(z.array(z.object({
+    timestamp: z.date(),
+    value: z.number(),
+    label: z.string().optional().nullable()
+  }))),
+  totalPortals: z.number().nonnegative(),
+  healthyPortals: z.number().nonnegative(),
+  activeIncidents: z.number().nonnegative(),
+  incidentTypeBreakdown: z.record(z.number()),
+  averageResponseTime: z.number().nonnegative(),
+  averageUptime: z.number().min(0).max(100),
+  averageErrorRate: z.number().min(0).max(100),
+  downPortals: z.number().nonnegative(),
+  degradedPortals: z.number().nonnegative(),
+  criticalIncidents: z.number().nonnegative(),
+  totalRequests: z.number().nonnegative(),
+  timestamp: z.date(),
+  warningPortals: z.number().nonnegative(),
+  lastUpdated: z.date(),
+  recentIncidents: z.array(z.object({
+    id: z.string().uuid(),
+    title: z.string(),
+    severity: z.string(),
+    status: z.string(),
+    createdAt: z.date()
+  })),
+  portalStatusBreakdown: z.record(z.number())
+});
+
+export interface StatisticsResponse extends z.infer<typeof StatisticsResponseSchema> {}
+
+/**
+ * Sparkline data response - matches backend SparklineDataResponse
+ */
+export const SparklineDataResponseSchema = z.object({
+  metricName: z.string(),
+  dataPoints: z.array(MetricDataPointSchema),
+  currentValue: z.number(),
+  previousValue: z.number(),
+  changePercentage: z.number(),
+  trend: z.string(),
+  data: z.array(z.number()),
+  labels: z.array(z.string()),
+  timeRange: z.nativeEnum(TimeRange),
+  generatedAt: z.date(),
+  values: z.array(z.number())
+});
+
+export interface SparklineDataResponse extends z.infer<typeof SparklineDataResponseSchema> {}

@@ -200,7 +200,7 @@ export const TeamActivitySchema = z.object({
   entityId: z.string().optional(),
   timestamp: z.date(),
   metadata: z.record(z.any()).optional(),
-  ipAddress: z.string().ip().optional(),
+  ipAddress: z.string().optional(),
   userAgent: z.string().optional()
 });
 
@@ -221,7 +221,7 @@ export const UserSessionSchema = z.object({
   refreshToken: z.string().optional(),
 
   // Session details
-  ipAddress: z.string().ip(),
+  ipAddress: z.string(),
   userAgent: z.string(),
   device: z.object({
     type: z.enum(['desktop', 'mobile', 'tablet']).optional(),
@@ -282,7 +282,7 @@ export const UserAuditLogSchema = z.object({
     after: z.record(z.any()).optional()
   }).optional(),
   timestamp: z.date(),
-  ipAddress: z.string().ip().optional(),
+  ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
   success: z.boolean(),
   errorMessage: z.string().optional()

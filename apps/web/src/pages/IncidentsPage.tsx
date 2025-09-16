@@ -32,13 +32,13 @@ export const IncidentsPage = () => {
 
   const getSeverityIcon = (severity: IncidentSeverity) => {
     switch (severity) {
-      case IncidentSeverity.CRITICAL:
+      case IncidentSeverity.Critical:
         return <AlertTriangle className="h-4 w-4 text-red-500" />
-      case IncidentSeverity.HIGH:
+      case IncidentSeverity.High:
         return <AlertTriangle className="h-4 w-4 text-orange-500" />
-      case IncidentSeverity.MEDIUM:
+      case IncidentSeverity.Medium:
         return <AlertTriangle className="h-4 w-4 text-yellow-500" />
-      case IncidentSeverity.LOW:
+      case IncidentSeverity.Low:
         return <AlertTriangle className="h-4 w-4 text-blue-500" />
       default:
         return <AlertTriangle className="h-4 w-4" />
@@ -47,13 +47,13 @@ export const IncidentsPage = () => {
 
   const getStatusIcon = (status: IncidentStatus) => {
     switch (status) {
-      case IncidentStatus.OPEN:
+      case IncidentStatus.Open:
         return <Clock className="h-4 w-4 text-blue-500" />
       case IncidentStatus.IN_PROGRESS:
         return <Clock className="h-4 w-4 text-yellow-500" />
-      case IncidentStatus.RESOLVED:
+      case IncidentStatus.Resolved:
         return <CheckCircle2 className="h-4 w-4 text-green-500" />
-      case IncidentStatus.CLOSED:
+      case IncidentStatus.Closed:
         return <XCircle className="h-4 w-4 text-gray-500" />
       default:
         return <Clock className="h-4 w-4" />
@@ -96,10 +96,10 @@ export const IncidentsPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Severities</SelectItem>
-              <SelectItem value={IncidentSeverity.CRITICAL}>Critical</SelectItem>
-              <SelectItem value={IncidentSeverity.HIGH}>High</SelectItem>
-              <SelectItem value={IncidentSeverity.MEDIUM}>Medium</SelectItem>
-              <SelectItem value={IncidentSeverity.LOW}>Low</SelectItem>
+              <SelectItem value={IncidentSeverity.Critical}>Critical</SelectItem>
+              <SelectItem value={IncidentSeverity.High}>High</SelectItem>
+              <SelectItem value={IncidentSeverity.Medium}>Medium</SelectItem>
+              <SelectItem value={IncidentSeverity.Low}>Low</SelectItem>
             </SelectContent>
           </Select>
           <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as IncidentStatus | 'all')}>
@@ -109,10 +109,10 @@ export const IncidentsPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value={IncidentStatus.OPEN}>Open</SelectItem>
+              <SelectItem value={IncidentStatus.Open}>Open</SelectItem>
               <SelectItem value={IncidentStatus.IN_PROGRESS}>In Progress</SelectItem>
-              <SelectItem value={IncidentStatus.RESOLVED}>Resolved</SelectItem>
-              <SelectItem value={IncidentStatus.CLOSED}>Closed</SelectItem>
+              <SelectItem value={IncidentStatus.Resolved}>Resolved</SelectItem>
+              <SelectItem value={IncidentStatus.Closed}>Closed</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -129,13 +129,13 @@ export const IncidentsPage = () => {
             <TabsTrigger value="active">
               Active
               <Badge variant="destructive" className="ml-2">
-                {incidents.filter(i => i.status === IncidentStatus.OPEN || i.status === IncidentStatus.IN_PROGRESS).length}
+                {incidents.filter(i => i.status === IncidentStatus.Open || i.status === IncidentStatus.InProgress).length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="resolved">
               Resolved
               <Badge variant="secondary" className="ml-2">
-                {incidents.filter(i => i.status === IncidentStatus.RESOLVED).length}
+                {incidents.filter(i => i.status === IncidentStatus.Resolved).length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="timeline">Timeline View</TabsTrigger>
@@ -158,7 +158,7 @@ export const IncidentsPage = () => {
           <TabsContent value="active" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredIncidents
-                .filter(i => i.status === IncidentStatus.OPEN || i.status === IncidentStatus.IN_PROGRESS)
+                .filter(i => i.status === IncidentStatus.Open || i.status === IncidentStatus.InProgress)
                 .map(incident => (
                   <div
                     key={incident.id}
@@ -174,7 +174,7 @@ export const IncidentsPage = () => {
           <TabsContent value="resolved" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredIncidents
-                .filter(i => i.status === IncidentStatus.RESOLVED)
+                .filter(i => i.status === IncidentStatus.Resolved)
                 .map(incident => (
                   <div
                     key={incident.id}

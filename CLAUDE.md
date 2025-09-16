@@ -203,6 +203,21 @@ public class CreatePortalCommandHandler : IRequestHandler<CreatePortalCommand, P
 9. **Security**: JWT authentication, API key for services
 10. **Real-time**: SignalR for live updates
 
+## Integration Status
+
+**⚠️ Current Status (September 16, 2025)**: Frontend-backend integration in progress. See [INTEGRATION_STATUS.md](./INTEGRATION_STATUS.md) for detailed status and known issues.
+
+### Known Issues
+- MetricsCollector HttpClient registration needs fixing
+- Some frontend components still use old lowercase enum values
+- Background services have dependency injection issues
+
+### Recent Changes
+- All DTOs moved to CentralCommand.Core library
+- Frontend types aligned with backend (PascalCase enums)
+- API services updated for direct DTO mapping
+- InMemory database configured for development
+
 ## Common Tasks
 
 ### Adding a New Entity

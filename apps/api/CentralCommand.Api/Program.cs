@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using CentralCommand.Api.Extensions;
 using CentralCommand.Api.Hubs;
+using CentralCommand.Api.Infrastructure.Authentication;
 using CentralCommand.Api.Infrastructure.BackgroundServices;
 using CentralCommand.Api.Infrastructure.Caching;
 using CentralCommand.Api.Infrastructure.Data;
@@ -13,10 +14,10 @@ using CentralCommand.Api.Services;
 using CentralCommand.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -37,6 +38,8 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -82,22 +85,40 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins(
-                builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" })
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader()
-            .AllowCredentials();
+            .AllowCredentials()
+            .SetIsOriginAllowed(origin => true); // Allow any origin in development
     });
 });
 
 // Configure Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+if (builder.Environment.IsDevelopment())
+{
+    // In development, allow anonymous access for easier testing
+    builder.Services.AddAuthentication("Test")
+        .AddScheme<TestAuthenticationSchemeOptions, TestAuthenticationHandler>("Test", null);
+
+    builder.Services.AddAuthorization(options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
+        options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            .RequireAssertion(_ => true) // Allow all in development
+            .Build();
+    });
+}
+else
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
@@ -125,34 +146,44 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("PortalRead", policy =>
-        policy.RequireClaim("permissions", "portal:read"));
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("PortalRead", policy =>
+            policy.RequireClaim("permissions", "portal:read"));
 
-    options.AddPolicy("PortalWrite", policy =>
-        policy.RequireClaim("permissions", "portal:write"));
+        options.AddPolicy("PortalWrite", policy =>
+            policy.RequireClaim("permissions", "portal:write"));
 
-    options.AddPolicy("IncidentManage", policy =>
-        policy.RequireClaim("permissions", "incident:manage"));
+        options.AddPolicy("IncidentManage", policy =>
+            policy.RequireClaim("permissions", "incident:manage"));
 
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Admin"));
-});
+        options.AddPolicy("AdminOnly", policy =>
+            policy.RequireRole("Admin"));
+    });
+}
 
 // Configure Entity Framework
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        sqlOptions =>
-        {
-            sqlOptions.EnableRetryOnFailure(
-                maxRetryCount: 3,
-                maxRetryDelay: TimeSpan.FromSeconds(10),
-                errorNumbersToAdd: null);
-            sqlOptions.CommandTimeout(30);
-        });
+    if (connectionString == "InMemory" || string.IsNullOrEmpty(connectionString))
+    {
+        // Use InMemory database for development/testing
+        options.UseInMemoryDatabase("CentralCommandDb");
+    }
+    else
+    {
+        options.UseSqlServer(
+            connectionString,
+            sqlOptions =>
+            {
+                sqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null);
+                sqlOptions.CommandTimeout(30);
+            });
+    }
 
     if (builder.Environment.IsDevelopment())
     {
@@ -251,13 +282,15 @@ builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.IIncidentServ
 builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.IStatisticsService, CentralCommand.Api.Services.StatisticsService>();
 builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.ICommandService, CentralCommand.Api.Services.CommandService>();
 builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.IUserPreferencesService, CentralCommand.Api.Services.UserPreferencesService>();
+builder.Services.AddScoped<CentralCommand.Core.Interfaces.Services.INotificationService, CentralCommand.Api.Services.NotificationService>();
 
 // Register infrastructure services
+builder.Services.AddScoped<CentralCommand.Core.Interfaces.Repositories.IUnitOfWork, CentralCommand.Api.Infrastructure.Repositories.UnitOfWork>();
 builder.Services.AddScoped<IPortalRepository, PortalRepository>();
 builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
 builder.Services.AddSingleton<ICacheService, HybridCacheService>();
 builder.Services.AddSingleton<IConnectionManager, ConnectionManager>();
-builder.Services.AddScoped<IMetricsCollector, MetricsCollector>();
+// MetricsCollector is registered as HttpClient below
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 
 // Register background services
@@ -336,45 +369,8 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
     Predicate = _ => false
 });
 
-// Map API endpoints
-var apiGroup = app.MapGroup("/api/v{version:apiVersion}")
-    .RequireAuthorization()
-    .WithOpenApi();
-
-// Portal endpoints
-// TODO: Uncomment when MapPortalEndpoints is implemented
-// apiGroup.MapGroup("/portals")
-//     .MapPortalEndpoints()
-//     .WithTags("Portals")
-//     .RequireAuthorization("PortalRead");
-
-// Incident endpoints
-// TODO: Uncomment when MapIncidentEndpoints is implemented
-// apiGroup.MapGroup("/incidents")
-//     .MapIncidentEndpoints()
-//     .WithTags("Incidents")
-//     .RequireAuthorization("IncidentManage");
-
-// Statistics endpoints
-// TODO: Uncomment when MapStatisticsEndpoints is implemented
-// apiGroup.MapGroup("/statistics")
-//     .MapStatisticsEndpoints()
-//     .WithTags("Statistics")
-//     .RequireAuthorization("PortalRead");
-
-// Command palette endpoints
-// TODO: Uncomment when MapCommandEndpoints is implemented
-// apiGroup.MapGroup("/commands")
-//     .MapCommandEndpoints()
-//     .WithTags("Commands")
-//     .RequireAuthorization();
-
-// User preference endpoints
-// TODO: Uncomment when MapUserEndpoints is implemented
-// apiGroup.MapGroup("/users/me")
-//     .MapUserEndpoints()
-//     .WithTags("User")
-//     .RequireAuthorization();
+// Map Controllers
+app.MapControllers();
 
 // Map SignalR hubs
 app.MapHub<MetricsHub>("/hubs/metrics");

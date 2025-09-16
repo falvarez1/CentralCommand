@@ -53,28 +53,28 @@ interface IncidentDetailsModalProps {
 }
 
 const severityConfig = {
-  [IncidentSeverity.CRITICAL]: {
+  [IncidentSeverity.Critical]: {
     icon: AlertCircle,
     color: 'text-red-500',
     bgColor: 'bg-red-50 dark:bg-red-950',
     borderColor: 'border-red-200 dark:border-red-800',
     badge: 'destructive' as const
   },
-  [IncidentSeverity.WARNING]: {
+  [IncidentSeverity.Medium]: {
     icon: AlertTriangle,
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-50 dark:bg-yellow-950',
     borderColor: 'border-yellow-200 dark:border-yellow-800',
     badge: 'warning' as const
   },
-  [IncidentSeverity.INFO]: {
+  [IncidentSeverity.Low]: {
     icon: Info,
     color: 'text-blue-500',
     bgColor: 'bg-blue-50 dark:bg-blue-950',
     borderColor: 'border-blue-200 dark:border-blue-800',
     badge: 'default' as const
   },
-  [IncidentSeverity.SUCCESS]: {
+  [IncidentSeverity.Low]: {
     icon: CheckCircle,
     color: 'text-green-500',
     bgColor: 'bg-green-50 dark:bg-green-950',
@@ -95,12 +95,12 @@ const typeIcons = {
 };
 
 const statusConfig = {
-  [IncidentStatus.OPEN]: { label: 'Open', color: 'text-red-600 dark:text-red-400' },
-  [IncidentStatus.INVESTIGATING]: { label: 'Investigating', color: 'text-yellow-600 dark:text-yellow-400' },
-  [IncidentStatus.IDENTIFIED]: { label: 'Identified', color: 'text-blue-600 dark:text-blue-400' },
-  [IncidentStatus.MONITORING]: { label: 'Monitoring', color: 'text-indigo-600 dark:text-indigo-400' },
-  [IncidentStatus.RESOLVED]: { label: 'Resolved', color: 'text-green-600 dark:text-green-400' },
-  [IncidentStatus.CLOSED]: { label: 'Closed', color: 'text-gray-600 dark:text-gray-400' }
+  [IncidentStatus.Open]: { label: 'Open', color: 'text-red-600 dark:text-red-400' },
+  [IncidentStatus.InProgress]: { label: 'Investigating', color: 'text-yellow-600 dark:text-yellow-400' },
+  [IncidentStatus.Acknowledged]: { label: 'Identified', color: 'text-blue-600 dark:text-blue-400' },
+  [IncidentStatus.InProgress]: { label: 'Monitoring', color: 'text-indigo-600 dark:text-indigo-400' },
+  [IncidentStatus.Resolved]: { label: 'Resolved', color: 'text-green-600 dark:text-green-400' },
+  [IncidentStatus.Closed]: { label: 'Closed', color: 'text-gray-600 dark:text-gray-400' }
 };
 
 export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
@@ -298,19 +298,19 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
 
               {/* Action buttons */}
               <div className="flex gap-2">
-                {incident.status === IncidentStatus.OPEN && (
+                {incident.status === IncidentStatus.Open && (
                   <Button onClick={handleAcknowledge} variant="outline">
                     <Zap className="w-4 h-4 mr-2" />
                     Acknowledge
                   </Button>
                 )}
-                {incident.status !== IncidentStatus.RESOLVED && incident.status !== IncidentStatus.CLOSED && (
+                {incident.status !== IncidentStatus.Resolved && incident.status !== IncidentStatus.Closed && (
                   <>
                     <Button onClick={() => setIsEditingResolution(true)} variant="outline">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Resolve
                     </Button>
-                    {incident.severity !== IncidentSeverity.CRITICAL && (
+                    {incident.severity !== IncidentSeverity.Critical && (
                       <Button onClick={handleEscalate} variant="outline">
                         <AlertCircle className="w-4 h-4 mr-2" />
                         Escalate
@@ -318,7 +318,7 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
                     )}
                   </>
                 )}
-                {(incident.status === IncidentStatus.RESOLVED || incident.status === IncidentStatus.CLOSED) && (
+                {(incident.status === IncidentStatus.Resolved || incident.status === IncidentStatus.Closed) && (
                   <Button onClick={handleReopen} variant="outline">
                     <Activity className="w-4 h-4 mr-2" />
                     Reopen
@@ -482,7 +482,7 @@ export const IncidentDetailsModal: React.FC<IncidentDetailsModalProps> = ({
 
             {/* Resolution Tab */}
             <TabsContent value="resolution" className="space-y-4">
-              {incident.status === IncidentStatus.RESOLVED || incident.status === IncidentStatus.CLOSED ? (
+              {incident.status === IncidentStatus.Resolved || incident.status === IncidentStatus.Closed ? (
                 <>
                   <Card>
                     <CardHeader>

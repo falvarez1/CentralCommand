@@ -34,7 +34,7 @@ export const DashboardPage: React.FC = () => {
 
   // Check for critical incidents
   const criticalIncidents = incidents.filter(
-    i => i.severity === IncidentSeverity.CRITICAL && i.status !== 'resolved'
+    i => i.severity === IncidentSeverity.Critical && i.status !== 'resolved'
   )
 
   // Check for degraded or down portals
