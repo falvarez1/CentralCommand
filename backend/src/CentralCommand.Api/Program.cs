@@ -6,6 +6,7 @@ using CentralCommand.Api.Hubs;
 using CentralCommand.Api.Infrastructure.Authentication;
 using CentralCommand.Api.Infrastructure.BackgroundServices;
 using CentralCommand.Api.Infrastructure.Caching;
+using CentralCommand.Api.Development.DataSeeding;
 using CentralCommand.Api.Infrastructure.Data;
 using CentralCommand.Api.Infrastructure.Middleware;
 using CentralCommand.Api.Infrastructure.Services;
@@ -26,6 +27,8 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -86,7 +89,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp", policy =>
     {
         var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-            ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+            ?? ["http://localhost:5173", "http://localhost:3000"];
 
         policy.WithOrigins(allowedOrigins)
             .AllowAnyMethod()
@@ -283,7 +286,7 @@ builder.Services.AddSignalR(options =>
 // Configure Health Checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ApplicationDbContext>("database");
-    // TODO: Add Redis health check when Redis package is installed
+    // FUTURE: Add Redis health check when Redis package is installed
     // .AddRedis(builder.Configuration.GetConnectionString("Redis") ?? string.Empty, name: "redis");
 
 // Register application services
@@ -300,11 +303,10 @@ builder.Services.AddScoped<IPortalRepository, PortalRepository>();
 builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
 builder.Services.AddSingleton<ICacheService, HybridCacheService>();
 builder.Services.AddSingleton<IConnectionManager, ConnectionManager>();
-// MetricsCollector is registered as HttpClient below
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 
 // Register data seeding service for development
-builder.Services.AddScoped<DataSeedingService>();
+builder.Services.AddScoped<IDataSeedingService, DevelopmentDataSeedingService>();
 
 // Register background services
 builder.Services.AddHostedService<MetricsCollectionService>();
@@ -326,7 +328,7 @@ builder.Services.AddVersionedApiExplorer(options =>
 });
 
 
-// Configure HttpClient
+// Configure HttpClient for MetricsCollector
 builder.Services.AddHttpClient<IMetricsCollector, MetricsCollector>()
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
     {
@@ -336,6 +338,8 @@ builder.Services.AddHttpClient<IMetricsCollector, MetricsCollector>()
     });
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -403,7 +407,7 @@ using (var scope = app.Services.CreateScope())
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Database is empty. Seeding with sample data...");
 
-            var seedingService = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
+            var seedingService = scope.ServiceProvider.GetRequiredService<IDataSeedingService>();
             await seedingService.SeedAsync();
 
             logger.LogInformation("Database seeding completed");

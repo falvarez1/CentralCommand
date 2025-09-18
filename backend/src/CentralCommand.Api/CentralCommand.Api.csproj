@@ -36,6 +36,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CentralCommand.Core\CentralCommand.Core.csproj" />
+    <ProjectReference Include="..\CentralCommand.ServiceDefaults\CentralCommand.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,7 @@
-using CentralCommand.Api.Infrastructure.Data;
+using CentralCommand.Api.Application.Commands.Dev;
+using CentralCommand.Api.Application.Queries.Dev;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CentralCommand.Api.Controllers;
 
@@ -12,30 +13,27 @@ namespace CentralCommand.Api.Controllers;
 [Produces("application/json")]
 public class DevController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-    private readonly DataSeedingService _seedingService;
+    private readonly IMediator _mediator;
     private readonly ILogger<DevController> _logger;
     private readonly IWebHostEnvironment _environment;
 
     public DevController(
-        ApplicationDbContext context,
+        IMediator mediator,
         ILogger<DevController> logger,
         IWebHostEnvironment environment)
     {
-        _context = context;
+        _mediator = mediator;
         _logger = logger;
         _environment = environment;
-        _seedingService = new DataSeedingService(context, logger as ILogger<DataSeedingService> ??
-            new LoggerFactory().CreateLogger<DataSeedingService>());
     }
 
     /// <summary>
     /// Seeds the database with sample data
     /// </summary>
     [HttpPost("seed")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SeedDatabaseResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> SeedData()
+    public async Task<IActionResult> SeedData([FromBody] SeedDatabaseCommand? command = null)
     {
         if (!_environment.IsDevelopment())
         {
@@ -44,18 +42,8 @@ public class DevController : ControllerBase
 
         try
         {
-            await _seedingService.SeedAsync();
-
-            var stats = new
-            {
-                portals = await _context.Portals.CountAsync(),
-                incidents = await _context.Incidents.CountAsync(),
-                healthChecks = await _context.HealthChecks.CountAsync(),
-                metricsHistory = await _context.MetricsHistory.CountAsync(),
-                message = "Database seeded successfully"
-            };
-
-            return Ok(stats);
+            var result = await _mediator.Send(command ?? new SeedDatabaseCommand());
+            return Ok(result);
         }
         catch (Exception ex)
         {
@@ -68,7 +56,7 @@ public class DevController : ControllerBase
     /// Clears all data from the database
     /// </summary>
     [HttpDelete("clear")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ClearDatabaseResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ClearData()
     {
@@ -79,19 +67,8 @@ public class DevController : ControllerBase
 
         try
         {
-            _logger.LogWarning("Clearing all data from database");
-
-            // Clear data in correct order to respect foreign keys
-            _context.Comments.RemoveRange(_context.Comments);
-            _context.MetricsHistory.RemoveRange(_context.MetricsHistory);
-            _context.HealthChecks.RemoveRange(_context.HealthChecks);
-            _context.Incidents.RemoveRange(_context.Incidents);
-            _context.Portals.RemoveRange(_context.Portals);
-
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Database cleared successfully");
-            return NoContent();
+            var result = await _mediator.Send(new ClearDatabaseCommand());
+            return Ok(result);
         }
         catch (Exception ex)
         {
@@ -104,7 +81,7 @@ public class DevController : ControllerBase
     /// Resets the database (clear and seed)
     /// </summary>
     [HttpPost("reset")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ResetDatabaseResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ResetData()
     {
@@ -115,29 +92,8 @@ public class DevController : ControllerBase
 
         try
         {
-            _logger.LogWarning("Resetting database");
-
-            // Clear existing data
-            _context.Comments.RemoveRange(_context.Comments);
-            _context.MetricsHistory.RemoveRange(_context.MetricsHistory);
-            _context.HealthChecks.RemoveRange(_context.HealthChecks);
-            _context.Incidents.RemoveRange(_context.Incidents);
-            _context.Portals.RemoveRange(_context.Portals);
-            await _context.SaveChangesAsync();
-
-            // Seed new data
-            await _seedingService.SeedAsync();
-
-            var stats = new
-            {
-                portals = await _context.Portals.CountAsync(),
-                incidents = await _context.Incidents.CountAsync(),
-                healthChecks = await _context.HealthChecks.CountAsync(),
-                metricsHistory = await _context.MetricsHistory.CountAsync(),
-                message = "Database reset successfully"
-            };
-
-            return Ok(stats);
+            var result = await _mediator.Send(new ResetDatabaseCommand());
+            return Ok(result);
         }
         catch (Exception ex)
         {
@@ -150,7 +106,7 @@ public class DevController : ControllerBase
     /// Gets database statistics
     /// </summary>
     [HttpGet("stats")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(DatabaseStatsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetStats()
     {
@@ -159,62 +115,38 @@ public class DevController : ControllerBase
             return Forbid("This endpoint is only available in development environment");
         }
 
-        var stats = new
-        {
-            database = new
-            {
-                provider = _context.Database.ProviderName,
-                canConnect = await _context.Database.CanConnectAsync(),
-                isInMemory = _context.Database.IsInMemory()
-            },
-            counts = new
-            {
-                portals = await _context.Portals.CountAsync(),
-                incidents = await _context.Incidents.CountAsync(),
-                healthChecks = await _context.HealthChecks.CountAsync(),
-                metricsHistory = await _context.MetricsHistory.CountAsync(),
-                comments = await _context.Comments.CountAsync()
-            },
-            recent = new
-            {
-                lastPortalCreated = await _context.Portals.OrderByDescending(p => p.CreatedAt).Select(p => p.CreatedAt).FirstOrDefaultAsync(),
-                lastIncidentCreated = await _context.Incidents.OrderByDescending(i => i.CreatedAt).Select(i => i.CreatedAt).FirstOrDefaultAsync(),
-                lastHealthCheck = await _context.HealthChecks.OrderByDescending(h => h.CheckedAt).Select(h => h.CheckedAt).FirstOrDefaultAsync()
-            }
-        };
-
-        return Ok(stats);
+        var result = await _mediator.Send(new GetDatabaseStatsQuery());
+        return Ok(result);
     }
 
     /// <summary>
     /// Tests database connectivity
     /// </summary>
     [HttpGet("health")]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(typeof(DatabaseHealthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(DatabaseHealthResponse), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> CheckHealth()
     {
         try
         {
-            var canConnect = await _context.Database.CanConnectAsync();
+            var result = await _mediator.Send(new CheckDatabaseHealthQuery());
 
-            if (canConnect)
+            if (result.Status == "healthy")
             {
-                return Ok(new
-                {
-                    status = "healthy",
-                    database = _context.Database.ProviderName,
-                    isInMemory = _context.Database.IsInMemory(),
-                    environment = _environment.EnvironmentName
-                });
+                return Ok(result);
             }
 
-            return StatusCode(503, new { status = "unhealthy", error = "Cannot connect to database" });
+            return StatusCode(503, result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Health check failed");
-            return StatusCode(503, new { status = "unhealthy", error = ex.Message });
+            return StatusCode(503, new DatabaseHealthResponse
+            {
+                Status = "unhealthy",
+                Error = ex.Message,
+                Environment = _environment.EnvironmentName
+            });
         }
     }
 }
