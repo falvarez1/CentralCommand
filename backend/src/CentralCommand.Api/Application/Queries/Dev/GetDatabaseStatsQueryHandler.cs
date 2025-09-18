@@ -48,8 +48,7 @@ public class GetDatabaseStatsQueryHandler : IRequestHandler<GetDatabaseStatsQuer
                 Database = new DatabaseStatsResponse.DatabaseInfo
                 {
                     Provider = _context.Database.ProviderName ?? string.Empty,
-                    CanConnect = await _context.Database.CanConnectAsync(cancellationToken),
-                    IsInMemory = _context.Database.IsInMemory()
+                    CanConnect = await _context.Database.CanConnectAsync(cancellationToken)
                 },
                 Counts = new DatabaseStatsResponse.EntityCounts
                 {

@@ -34,7 +34,6 @@ public class CheckDatabaseHealthQueryHandler : IRequestHandler<CheckDatabaseHeal
                 {
                     Status = "unhealthy",
                     Database = _context.Database.ProviderName ?? string.Empty,
-                    IsInMemory = _context.Database.IsInMemory(),
                     Environment = _environment.EnvironmentName,
                     Error = "Cannot connect to database"
                 };
@@ -44,7 +43,6 @@ public class CheckDatabaseHealthQueryHandler : IRequestHandler<CheckDatabaseHeal
             {
                 Status = "healthy",
                 Database = _context.Database.ProviderName ?? string.Empty,
-                IsInMemory = _context.Database.IsInMemory(),
                 Environment = _environment.EnvironmentName
             };
         }
@@ -55,7 +53,6 @@ public class CheckDatabaseHealthQueryHandler : IRequestHandler<CheckDatabaseHeal
             {
                 Status = "unhealthy",
                 Database = _context.Database.ProviderName ?? string.Empty,
-                IsInMemory = false,
                 Environment = _environment.EnvironmentName,
                 Error = ex.Message
             };

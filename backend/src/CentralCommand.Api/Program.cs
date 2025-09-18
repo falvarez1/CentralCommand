@@ -165,29 +165,10 @@ else
     });
 }
 
-// Configure Entity Framework
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// Configure Entity Framework with Aspire SQL Server integration
+// This provides automatic retry, health checks, and telemetry
+builder.AddSqlServerDbContext<ApplicationDbContext>("centralcommand", configureDbContextOptions: options =>
 {
-    if (connectionString == "InMemory" || string.IsNullOrEmpty(connectionString))
-    {
-        // Use InMemory database for development/testing
-        options.UseInMemoryDatabase("CentralCommandDb");
-    }
-    else
-    {
-        options.UseSqlServer(
-            connectionString,
-            sqlOptions =>
-            {
-                sqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(10),
-                    errorNumbersToAdd: null);
-                sqlOptions.CommandTimeout(30);
-            });
-    }
-
     if (builder.Environment.IsDevelopment())
     {
         options.EnableSensitiveDataLogging();
@@ -392,30 +373,41 @@ app.MapControllers();
 // Map SignalR hubs
 app.MapHub<MetricsHub>("/hubs/metrics");
 
-// Ensure database is created and migrations are applied
+// Apply database migrations and seed data
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    if (app.Environment.IsDevelopment())
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
     {
-        await dbContext.Database.EnsureCreatedAsync();
+        // Apply pending migrations for SQL Server
+        logger.LogInformation("Applying database migrations...");
+        await dbContext.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully");
 
         // Seed data if database is empty
-        var portalCount = await dbContext.Portals.CountAsync();
-        if (portalCount == 0)
+        if (app.Environment.IsDevelopment())
         {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("Database is empty. Seeding with sample data...");
+            var portalCount = await dbContext.Portals.CountAsync();
+            if (portalCount == 0)
+            {
+                logger.LogInformation("Database is empty. Seeding with sample data...");
 
-            var seedingService = scope.ServiceProvider.GetRequiredService<IDataSeedingService>();
-            await seedingService.SeedAsync();
+                var seedingService = scope.ServiceProvider.GetRequiredService<IDataSeedingService>();
+                await seedingService.SeedAsync();
 
-            logger.LogInformation("Database seeding completed");
+                logger.LogInformation("Database seeding completed");
+            }
         }
     }
-    else
+    catch (Exception ex)
     {
-        await dbContext.Database.MigrateAsync();
+        logger.LogError(ex, "An error occurred while migrating the database");
+        if (app.Environment.IsDevelopment())
+        {
+            throw; // Re-throw in development to see the error details
+        }
     }
 }
 

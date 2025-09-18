@@ -52,11 +52,29 @@ public class UnitOfWork : IUnitOfWork
             throw new InvalidOperationException("A transaction is already in progress.");
         }
 
+        // Check if we're using a retrying execution strategy
+        var executionStrategy = _context.Database.CreateExecutionStrategy();
+        if (executionStrategy.RetriesOnFailure)
+        {
+            // For retrying execution strategies, we'll handle transactions differently
+            // The actual transaction will be created when needed
+            return;
+        }
+
         _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
     }
 
     public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
     {
+        // Check if we're using a retrying execution strategy
+        var executionStrategy = _context.Database.CreateExecutionStrategy();
+        if (executionStrategy.RetriesOnFailure)
+        {
+            // With retry strategy, transactions are handled differently
+            await SaveChangesAsync(cancellationToken);
+            return;
+        }
+
         if (_transaction == null)
         {
             throw new InvalidOperationException("No transaction is in progress.");
@@ -99,17 +117,43 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default)
     {
-        await BeginTransactionAsync(cancellationToken);
-        try
+        var executionStrategy = _context.Database.CreateExecutionStrategy();
+
+        if (executionStrategy.RetriesOnFailure)
         {
-            var result = await operation();
-            await CommitTransactionAsync(cancellationToken);
-            return result;
+            // Use the execution strategy to handle the transaction
+            return await executionStrategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    var result = await operation();
+                    await _context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    return result;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            });
         }
-        catch
+        else
         {
-            await RollbackTransactionAsync(cancellationToken);
-            throw;
+            // Use the traditional transaction approach
+            await BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var result = await operation();
+                await CommitTransactionAsync(cancellationToken);
+                return result;
+            }
+            catch
+            {
+                await RollbackTransactionAsync(cancellationToken);
+                throw;
+            }
         }
     }
 

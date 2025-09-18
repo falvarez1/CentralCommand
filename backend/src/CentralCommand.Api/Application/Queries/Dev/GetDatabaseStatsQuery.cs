@@ -16,7 +16,6 @@ public record DatabaseStatsResponse
     {
         public string Provider { get; init; } = string.Empty;
         public bool CanConnect { get; init; }
-        public bool IsInMemory { get; init; }
     }
 
     public record EntityCounts

@@ -10,7 +10,6 @@ public record DatabaseHealthResponse
 {
     public string Status { get; init; } = "healthy";
     public string Database { get; init; } = string.Empty;
-    public bool IsInMemory { get; init; }
     public string Environment { get; init; } = string.Empty;
     public string? Error { get; init; }
 }
