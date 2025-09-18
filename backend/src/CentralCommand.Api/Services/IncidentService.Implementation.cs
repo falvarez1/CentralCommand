@@ -13,8 +13,6 @@ namespace CentralCommand.Api.Services;
 
 public partial class IncidentService : IIncidentService
 {
-    private readonly IIncidentRepository _repository = null!;
-
     // Implement missing IIncidentService methods
 
     public async Task<IncidentResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

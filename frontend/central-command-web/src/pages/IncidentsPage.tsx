@@ -15,7 +15,7 @@ export const IncidentsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSeverity, setSelectedSeverity] = useState<IncidentSeverity | 'all'>('all')
   const [selectedStatus, setSelectedStatus] = useState<IncidentStatus | 'all'>('all')
-  const [selectedIncident, setSelectedIncident] = useState<number | null>(null)
+  const [selectedIncident, setSelectedIncident] = useState<any>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
 
   // Filter incidents based on search and filters
@@ -146,7 +146,7 @@ export const IncidentsPage = () => {
               {filteredIncidents.map(incident => (
                 <div
                   key={incident.id}
-                  onClick={() => setSelectedIncident(incident.id)}
+                  onClick={() => setSelectedIncident(incident)}
                   className="cursor-pointer"
                 >
                   <IncidentCard incident={incident} />
@@ -162,7 +162,7 @@ export const IncidentsPage = () => {
                 .map(incident => (
                   <div
                     key={incident.id}
-                    onClick={() => setSelectedIncident(incident.id)}
+                    onClick={() => setSelectedIncident(incident)}
                     className="cursor-pointer"
                   >
                     <IncidentCard incident={incident} />
@@ -178,7 +178,7 @@ export const IncidentsPage = () => {
                 .map(incident => (
                   <div
                     key={incident.id}
-                    onClick={() => setSelectedIncident(incident.id)}
+                    onClick={() => setSelectedIncident(incident)}
                     className="cursor-pointer"
                   >
                     <IncidentCard incident={incident} />
@@ -195,8 +195,8 @@ export const IncidentsPage = () => {
         {/* Modals */}
         {selectedIncident && (
           <IncidentDetailsModal
-            incidentId={selectedIncident}
-            open={!!selectedIncident}
+            incident={selectedIncident}
+            isOpen={!!selectedIncident}
             onClose={() => setSelectedIncident(null)}
           />
         )}

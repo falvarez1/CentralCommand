@@ -2,6 +2,7 @@ using CentralCommand.Core.Domain.Entities;
 using CentralCommand.Core.Domain.Enums;
 using CentralCommand.Core.Domain.ValueObjects;
 using CentralCommand.Core.Interfaces.Services;
+using CentralCommand.Core.Interfaces.Repositories;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -9,18 +10,21 @@ namespace CentralCommand.Api.Services;
 
 public partial class IncidentService : IIncidentService
 {
-    private readonly IUnitOfWork _unitOfWork = null!;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationService _notificationService;
     private readonly ILogger<IncidentService> _logger;
+    private readonly IIncidentRepository _repository;
 
     public IncidentService(
         IUnitOfWork unitOfWork,
         INotificationService notificationService,
-        ILogger<IncidentService> logger)
+        ILogger<IncidentService> logger,
+        IIncidentRepository repository)
     {
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
         _logger = logger;
+        _repository = repository;
     }
 
     public async Task<Incident> CreateIncidentAsync(
