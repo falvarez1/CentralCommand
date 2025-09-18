@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { v4 as uuidv4 } from 'uuid';
+import { incidentsService } from '../lib/api/services/incidents.service';
+import { useAppConfigStore } from './useAppConfigStore';
+import { toast } from 'sonner';
 import {
   Incident,
   IncidentSeverity,
@@ -12,132 +15,6 @@ import {
   UpdateIncidentInput,
   IncidentStats
 } from '../types/incident.types';
-
-/**
- * Mock data generator for incidents
- */
-const generateMockIncidents = (): Incident[] => {
-  const severities = Object.values(IncidentSeverity);
-  const types = Object.values(IncidentType);
-  const statuses = Object.values(IncidentStatus);
-
-  const incidentTemplates = [
-    {
-      title: 'Database connection timeout',
-      description: 'PostgreSQL primary database experiencing connection timeouts',
-      type: IncidentType.DATABASE,
-      severity: IncidentSeverity.High
-    },
-    {
-      title: 'API Gateway high latency',
-      description: 'Response times exceeding 5 seconds for API endpoints',
-      type: IncidentType.PERFORMANCE,
-      severity: IncidentSeverity.Medium
-    },
-    {
-      title: 'Security vulnerability detected',
-      description: 'Critical CVE found in dependency package',
-      type: IncidentType.SECURITY,
-      severity: IncidentSeverity.Critical
-    },
-    {
-      title: 'Kubernetes pod crashes',
-      description: 'Multiple pod restarts in production cluster',
-      type: IncidentType.INFRASTRUCTURE,
-      severity: IncidentSeverity.High
-    },
-    {
-      title: 'Payment service outage',
-      description: 'Payment processing service returning 503 errors',
-      type: IncidentType.SERVICE,
-      severity: IncidentSeverity.Critical
-    },
-    {
-      title: 'Network connectivity issues',
-      description: 'Intermittent packet loss between data centers',
-      type: IncidentType.NETWORK,
-      severity: IncidentSeverity.Medium
-    },
-    {
-      title: 'Storage capacity warning',
-      description: 'Primary storage cluster at 85% capacity',
-      type: IncidentType.INFRASTRUCTURE,
-      severity: IncidentSeverity.Low
-    },
-    {
-      title: 'Authentication service degraded',
-      description: 'OAuth provider experiencing intermittent failures',
-      type: IncidentType.SERVICE,
-      severity: IncidentSeverity.High
-    },
-    {
-      title: 'Memory leak detected',
-      description: 'Application server memory usage continuously increasing',
-      type: IncidentType.PERFORMANCE,
-      severity: IncidentSeverity.Medium
-    },
-    {
-      title: 'SSL certificate expiring',
-      description: 'Production SSL certificate expires in 7 days',
-      type: IncidentType.SECURITY,
-      severity: IncidentSeverity.Low
-    }
-  ];
-
-  return incidentTemplates.map((template, index) => {
-    const createdAt = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000);
-    const isResolved = Math.random() > 0.3;
-    const resolvedAt = isResolved ? new Date(createdAt.getTime() + Math.random() * 24 * 60 * 60 * 1000) : undefined;
-
-    return {
-      id: uuidv4(),
-      title: template.title,
-      description: template.description,
-      type: template.type,
-      severity: template.severity,
-      status: isResolved ? IncidentStatus.Resolved : statuses[Math.floor(Math.random() * 3)],
-      affectedPortals: [uuidv4()],
-      affectedServices: [`service-${index}`, `service-${index + 10}`],
-      impactedUsers: Math.floor(Math.random() * 1000),
-      assignee: uuidv4(),
-      team: uuidv4(),
-      reportedBy: uuidv4(),
-      createdAt,
-      updatedAt: new Date(),
-      resolvedAt,
-      acknowledgedAt: isResolved || Math.random() > 0.5 ? new Date(createdAt.getTime() + Math.random() * 60 * 60 * 1000) : undefined,
-      rootCause: isResolved ? 'Configuration issue in production environment' : undefined,
-      resolution: isResolved ? 'Applied configuration patch and restarted services' : undefined,
-      postmortemUrl: isResolved && Math.random() > 0.5 ? `https://wiki.internal/postmortem/${uuidv4()}` : undefined,
-      tags: ['production', 'critical', 'automated-detection'].slice(0, Math.floor(Math.random() * 3) + 1),
-      timeline: [
-        {
-          id: uuidv4(),
-          timestamp: createdAt,
-          action: 'Incident created',
-          description: 'Automated monitoring detected the issue',
-          performedBy: uuidv4()
-        }
-      ],
-      metrics: {
-        mttr: isResolved ? Math.floor(Math.random() * 120) : undefined, // minutes
-        mtbf: Math.floor(Math.random() * 10000), // minutes
-        impactDuration: isResolved ? Math.floor(Math.random() * 240) : undefined, // minutes
-        severityChanges: Math.floor(Math.random() * 3)
-      },
-      notifications: {
-        emailSent: true,
-        slackSent: true,
-        smsSent: template.severity === IncidentSeverity.Critical,
-        teamsNotified: [uuidv4()]
-      },
-      relatedIncidents: index > 0 ? [uuidv4()] : [],
-      isPublic: Math.random() > 0.7,
-      createdBy: uuidv4(),
-      updatedBy: uuidv4()
-    };
-  });
-};
 
 interface IncidentState {
   // State
@@ -186,83 +63,20 @@ interface IncidentState {
 
   // Sync actions
   syncIncidents: () => Promise<void>;
+  fetchIncidentsFromApi: () => Promise<void>;
+  fetchIncidentStatsFromApi: () => Promise<void>;
   setError: (error: string | null) => void;
 
   // Initialize
-  initialize: () => void;
+  initialize: () => Promise<void>;
 }
 
 export const useIncidentStore = create<IncidentState>()(
   devtools(
     persist(
       immer((set, get) => ({
-        // Initial state with sample data for development
-        incidents: [
-          {
-            id: '1',
-            title: 'Database Connection Timeout',
-            description: 'Production database is experiencing connection timeouts',
-            type: IncidentType.Database,
-            severity: IncidentSeverity.High,
-            status: IncidentStatus.Open,
-            affectedPortals: [],
-            affectedServices: ['Database Service'],
-            impactedUsers: 500,
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-            updatedAt: new Date(),
-            tags: ['database', 'production'],
-            timeline: [],
-            isPublic: false,
-            createdBy: 'system',
-            updatedBy: 'system',
-            commentCount: 0
-          },
-          {
-            id: '2',
-            title: 'API Gateway Performance Degradation',
-            description: 'API response times have increased significantly',
-            type: IncidentType.Performance,
-            severity: IncidentSeverity.Medium,
-            status: IncidentStatus.InProgress,
-            affectedPortals: [],
-            affectedServices: ['API Gateway'],
-            impactedUsers: 200,
-            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-            updatedAt: new Date(),
-            tags: ['api', 'performance'],
-            timeline: [],
-            isPublic: false,
-            createdBy: 'system',
-            updatedBy: 'system',
-            commentCount: 2
-          },
-          {
-            id: '3',
-            title: 'Network Connectivity Issues',
-            description: 'Intermittent network connectivity problems in EU region',
-            type: IncidentType.Network,
-            severity: IncidentSeverity.Critical,
-            status: IncidentStatus.Resolved,
-            affectedPortals: [],
-            affectedServices: ['Network Infrastructure'],
-            impactedUsers: 1000,
-            createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-            updatedAt: new Date(),
-            resolvedAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // Resolved 12 hours ago
-            tags: ['network', 'eu-region'],
-            timeline: [],
-            isPublic: true,
-            createdBy: 'system',
-            updatedBy: 'system',
-            commentCount: 5,
-            metrics: {
-              mttr: 180, // 3 hours
-              mtbf: 720, // 12 hours
-              impactDuration: 180,
-              severityChanges: 1
-            }
-          }
-        ],
+        // Initial state
+        incidents: [],
         filter: {},
         selectedIncident: null,
         isLoading: false,
@@ -614,27 +428,112 @@ export const useIncidentStore = create<IncidentState>()(
         }),
 
         syncIncidents: async () => {
+          const { dataSourceMode } = useAppConfigStore.getState();
+
           set(state => {
             state.isLoading = true;
             state.error = null;
           });
 
           try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // In real app, would fetch from API
-            // const response = await fetch('/api/incidents');
-            // const incidents = await response.json();
-
-            set(state => {
-              state.isLoading = false;
-            });
+            // Always fetch from API (which will use the correct endpoint based on mode)
+            await get().fetchIncidentsFromApi();
           } catch (error) {
+            console.error('Failed to sync incidents:', error);
+
+            // If API fails and we're in real mode, try to seed the database
+            if (dataSourceMode === 'real' && get().incidents.length === 0) {
+              try {
+                // Try to seed the database
+                const response = await fetch('http://localhost:5000/api/v1/dev/seed', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                  // Retry fetching incidents after seeding
+                  await get().fetchIncidentsFromApi();
+                  toast.success('Database initialized with sample data');
+                }
+              } catch (seedError) {
+                console.error('Failed to seed database:', seedError);
+              }
+            }
+
+            // Show error if no data available
+            if (get().incidents.length === 0) {
+              set(state => {
+                state.isLoading = false;
+                state.error = 'Unable to connect to API. Check if the backend is running.';
+              });
+              toast.error('Connection Failed', {
+                description: 'Unable to connect to API. Check if the backend is running.'
+              });
+            }
+          }
+        },
+
+        fetchIncidentsFromApi: async () => {
+          set(state => {
+            state.isLoading = true;
+            state.error = null;
+          });
+
+          try {
+            const response = await incidentsService.getIncidents({
+              pageSize: 100, // Get more incidents for demo
+              sortBy: 'createdAt',
+              sortOrder: 'desc'
+            });
+
+            // Map API response to store format
+            const incidents = response.items.map((item: any) => ({
+              ...item,
+              createdAt: new Date(item.createdAt),
+              updatedAt: new Date(item.updatedAt),
+              resolvedAt: item.resolvedAt ? new Date(item.resolvedAt) : undefined,
+              acknowledgedAt: item.acknowledgedAt ? new Date(item.acknowledgedAt) : undefined,
+              closedAt: item.closedAt ? new Date(item.closedAt) : undefined,
+              timeline: item.timeline || [],
+              affectedPortals: item.affectedPortals || [],
+              affectedServices: item.affectedServices || [],
+              tags: item.tags || [],
+              relatedIncidents: item.relatedIncidents || []
+            }));
+
             set(state => {
-              state.error = error instanceof Error ? error.message : 'Failed to sync incidents';
+              state.incidents = incidents;
               state.isLoading = false;
             });
+
+            // Update API connection status
+            useAppConfigStore.getState().setApiConnected(true);
+
+          } catch (error) {
+            console.error('Failed to fetch incidents from API:', error);
+            set(state => {
+              state.error = error instanceof Error ? error.message : 'Failed to fetch incidents from API';
+              state.isLoading = false;
+            });
+
+            // Update API connection status
+            useAppConfigStore.getState().setApiConnected(false);
+
+            // Show error toast
+            toast.error('Failed to fetch incidents', {
+              description: 'Unable to connect to the API. Please check your connection.'
+            });
+          }
+        },
+
+        fetchIncidentStatsFromApi: async () => {
+          try {
+            const stats = await incidentsService.getIncidentStats();
+            // Stats will be used directly by components that need them
+            return stats;
+          } catch (error) {
+            console.error('Failed to fetch incident stats from API:', error);
+            return null;
           }
         },
 
@@ -642,26 +541,9 @@ export const useIncidentStore = create<IncidentState>()(
           state.error = error;
         }),
 
-        initialize: () => {
-          const { incidents } = get();
-          if (incidents.length === 0) {
-            set(state => {
-              state.incidents = generateMockIncidents();
-            });
-          }
-        },
-
-        // Aliases for App.tsx compatibility
-        initializeIncidents: () => {
-          get().initialize();
-        },
-
-        startIncidentSimulation: () => {
-          // Simulation can be added later
-          // Return cleanup function
-          return () => {
-            // In a real app, we'd clear intervals here
-          };
+        initialize: async () => {
+          // Always sync with the configured data source on initialization
+          await get().syncIncidents();
         }
       })),
       {

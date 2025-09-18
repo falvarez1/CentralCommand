@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Environment schema validation
 const envSchema = z.object({
   VITE_API_BASE_URL: z.string().url().default('http://localhost:5000'),
+  VITE_MOCK_API_URL: z.string().url().default('http://localhost:5001'),
   VITE_API_TIMEOUT: z.string().transform(Number).default('30000'),
   VITE_ENABLE_MOCK_API: z.string().transform(val => val === 'true').default('false'),
   VITE_SIGNALR_HUB_URL: z.string().url().default('http://localhost:5000/hubs/metrics'),
@@ -14,6 +15,7 @@ const envSchema = z.object({
 // Parse and validate environment variables
 const processEnv = {
   VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+  VITE_MOCK_API_URL: import.meta.env.VITE_MOCK_API_URL,
   VITE_API_TIMEOUT: import.meta.env.VITE_API_TIMEOUT,
   VITE_ENABLE_MOCK_API: import.meta.env.VITE_ENABLE_MOCK_API,
   VITE_SIGNALR_HUB_URL: import.meta.env.VITE_SIGNALR_HUB_URL,
@@ -32,6 +34,7 @@ if (!parsed.success) {
 export const env = {
   api: {
     baseUrl: parsed.data.VITE_API_BASE_URL,
+    mockUrl: parsed.data.VITE_MOCK_API_URL,
     timeout: parsed.data.VITE_API_TIMEOUT,
     enableMock: parsed.data.VITE_ENABLE_MOCK_API,
   },

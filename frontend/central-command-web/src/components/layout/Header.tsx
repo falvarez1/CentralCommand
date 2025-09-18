@@ -6,8 +6,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   Bell,
-  Grid3x3,
-  List,
+  Database,
+  Server,
   Menu,
   Moon,
   Sun,
@@ -15,7 +15,9 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,9 +31,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useTheme } from '@/components/providers/theme-provider';
 import { cn } from '@/lib/utils';
-import { ViewMode } from '@/types';
+import { useAppConfigStore } from '@/stores/useAppConfigStore';
+import { toast } from 'sonner';
+import { testApiConnection } from '@/lib/api/client';
+import { env } from '@/config/env';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -40,10 +47,32 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) => {
   const { theme, setTheme } = useTheme();
+  const { dataSourceMode, apiConnected, setApiConnected } = useAppConfigStore();
   const [searchValue, setSearchValue] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.GRID);
   const [notificationCount, setNotificationCount] = useState(3);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+
+  // Check API connection on mount and when mode changes
+  useEffect(() => {
+    const checkConnection = async () => {
+      setIsChecking(true);
+      try {
+        const apiUrl = dataSourceMode === 'mock' ? env.api.mockUrl : env.api.baseUrl;
+        const isConnected = await testApiConnection(apiUrl);
+        setApiConnected(isConnected);
+      } catch (error) {
+        setApiConnected(false);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    checkConnection();
+    // Check every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+    return () => clearInterval(interval);
+  }, [dataSourceMode]);
 
   // Handle global search shortcut (Cmd+K)
   useEffect(() => {
@@ -118,24 +147,43 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          <div className="hidden md:flex items-center border rounded-lg p-1 bg-muted/50">
-            <Button
-              variant={viewMode === ViewMode.GRID ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode(ViewMode.GRID)}
-              className="h-8 px-3"
-            >
-              <Grid3x3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === ViewMode.LIST ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode(ViewMode.LIST)}
-              className="h-8 px-3"
-            >
-              <List className="h-4 w-4" />
-            </Button>
+          {/* Data Source Switch with Connection Status */}
+          <div className="hidden md:flex items-center gap-3 px-3 py-1.5 border rounded-lg bg-muted/50">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="data-source-switch" className="text-xs font-medium text-muted-foreground">
+                Mock
+              </Label>
+            </div>
+
+            <Switch
+              id="data-source-switch"
+              checked={dataSourceMode === 'real'}
+              onCheckedChange={(checked) => {
+                const newMode = checked ? 'real' : 'mock';
+                useAppConfigStore.getState().setDataSourceMode(newMode);
+                toast.success(`Switched to ${newMode === 'mock' ? 'Mock Data' : 'Real API'}`, {
+                  description: newMode === 'mock'
+                    ? 'Using Mock API on port 5001'
+                    : 'Using Real API on port 5000'
+                });
+              }}
+              className="data-[state=checked]:bg-primary"
+            />
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="data-source-switch" className="text-xs font-medium text-muted-foreground">
+                Real
+              </Label>
+              <Server className="h-4 w-4 text-muted-foreground" />
+              {isChecking ? (
+                <div className="h-3 w-3 rounded-full bg-yellow-500 animate-pulse" />
+              ) : apiConnected ? (
+                <Wifi className="h-3 w-3 text-green-500" title="Connected" />
+              ) : (
+                <WifiOff className="h-3 w-3 text-red-500" title="Disconnected" />
+              )}
+            </div>
           </div>
 
           {/* Theme Toggle */}

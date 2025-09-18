@@ -192,12 +192,22 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     }
 });
 
-// Configure Redis caching
-builder.Services.AddStackExchangeRedisCache(options =>
+// Configure distributed caching
+var redisConnection = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConnection))
 {
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-    options.InstanceName = "CentralCommand";
-});
+    // Use Redis if connection string is provided
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnection;
+        options.InstanceName = "CentralCommand";
+    });
+}
+else
+{
+    // Use in-memory distributed cache if Redis is not configured
+    builder.Services.AddDistributedMemoryCache();
+}
 
 // Configure in-memory caching
 builder.Services.AddMemoryCache();
@@ -293,6 +303,9 @@ builder.Services.AddSingleton<IConnectionManager, ConnectionManager>();
 // MetricsCollector is registered as HttpClient below
 builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 
+// Register data seeding service for development
+builder.Services.AddScoped<DataSeedingService>();
+
 // Register background services
 builder.Services.AddHostedService<MetricsCollectionService>();
 builder.Services.AddHostedService<HealthCheckService>();
@@ -382,6 +395,19 @@ using (var scope = app.Services.CreateScope())
     if (app.Environment.IsDevelopment())
     {
         await dbContext.Database.EnsureCreatedAsync();
+
+        // Seed data if database is empty
+        var portalCount = await dbContext.Portals.CountAsync();
+        if (portalCount == 0)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Database is empty. Seeding with sample data...");
+
+            var seedingService = scope.ServiceProvider.GetRequiredService<DataSeedingService>();
+            await seedingService.SeedAsync();
+
+            logger.LogInformation("Database seeding completed");
+        }
     }
     else
     {

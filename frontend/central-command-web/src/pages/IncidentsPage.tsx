@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AppLayout } from '@/components/layout'
 import { useIncidentStore } from '@/stores/useIncidentStore'
+import { useAppConfigStore } from '@/stores/useAppConfigStore'
 import { IncidentSeverity, IncidentStatus } from '@/types'
 import { IncidentCard, IncidentDetailsModal, CreateIncidentModal, IncidentStats, IncidentTimeline } from '@/components/incidents'
 import { Button } from '@/components/ui/button'
@@ -11,12 +12,18 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Filter, AlertTriangle, Clock, CheckCircle2, XCircle } from 'lucide-react'
 
 export const IncidentsPage = () => {
-  const { incidents, stats, filterBySeverity, filterByStatus, searchIncidents } = useIncidentStore()
+  const { incidents, stats, filterBySeverity, filterByStatus, searchIncidents, syncIncidents, isLoading } = useIncidentStore()
+  const { dataSourceMode } = useAppConfigStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSeverity, setSelectedSeverity] = useState<IncidentSeverity | 'all'>('all')
   const [selectedStatus, setSelectedStatus] = useState<IncidentStatus | 'all'>('all')
   const [selectedIncident, setSelectedIncident] = useState<any>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+
+  // Load incidents when component mounts or data source changes
+  useEffect(() => {
+    syncIncidents()
+  }, [dataSourceMode])
 
   // Filter incidents based on search and filters
   const filteredIncidents = incidents.filter(incident => {
@@ -116,6 +123,18 @@ export const IncidentsPage = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span className="text-muted-foreground">
+                {dataSourceMode === 'real' ? 'Loading from API...' : 'Loading mock data...'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Tabs for different views */}
         <Tabs defaultValue="all" className="w-full">

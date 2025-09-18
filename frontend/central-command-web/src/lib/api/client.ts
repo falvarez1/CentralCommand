@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { env } from '../../config/env';
 import { toast } from 'sonner';
+import { useAppConfigStore } from '../../stores/useAppConfigStore';
 
 // Custom error class for API errors
 export class ApiError extends Error {
@@ -15,10 +16,16 @@ export class ApiError extends Error {
   }
 }
 
+// Get the current API URL based on mode
+const getApiUrl = (): string => {
+  const store = useAppConfigStore.getState();
+  return store.dataSourceMode === 'mock' ? env.api.mockUrl : env.api.baseUrl;
+};
+
 // Create axios instance with base configuration
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
-    baseURL: env.api.baseUrl,
+    baseURL: getApiUrl(),
     timeout: env.api.timeout,
     headers: {
       'Content-Type': 'application/json',
@@ -30,6 +37,9 @@ const createApiClient = (): AxiosInstance => {
   // Request interceptor for auth and logging
   client.interceptors.request.use(
     (config) => {
+      // Dynamically update baseURL based on current mode
+      config.baseURL = getApiUrl();
+
       // Add auth token if available
       const token = localStorage.getItem('authToken');
       if (token) {
@@ -155,6 +165,21 @@ const createApiClient = (): AxiosInstance => {
 
 // Export configured axios instance
 export const apiClient = createApiClient();
+
+// Function to test API connectivity
+export const testApiConnection = async (url?: string): Promise<boolean> => {
+  try {
+    const testUrl = url || getApiUrl();
+    const response = await axios.get(`${testUrl}/health`, {
+      timeout: 5000,
+      validateStatus: () => true,
+    });
+    return response.status === 200;
+  } catch (error) {
+    console.error('API connection test failed:', error);
+    return false;
+  }
+};
 
 // Utility functions for common HTTP methods
 export const api = {

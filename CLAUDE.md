@@ -2,6 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 ACTIVE TECHNICAL DEBT REMEDIATION
+
+**Status**: Phase 1 Complete, Phase 2 Pending
+**Full Documentation**: [TECHNICAL_DEBT_REMEDIATION.md](./TECHNICAL_DEBT_REMEDIATION.md)
+
+### Quick Summary
+- **Goal**: Achieve ZERO technical debt with full clean architecture compliance
+- **Progress**: ~200+ lines removed, 5 files deleted
+- **Remaining**: ~15 hours of refactoring work across 5 phases
+- **Critical Issues**: DevController violations, God objects in stores, missing CQRS
+
+### When Resuming Work
+1. Read the full [Technical Debt Remediation Plan](./TECHNICAL_DEBT_REMEDIATION.md)
+2. Check current phase status and next steps
+3. Follow the established patterns in SOFTWARE-DESIGN-STANDARDS.md
+4. Continue from Phase 2: Backend Architecture Refactoring
+
+---
+
 ## Required Reading
 **IMPORTANT**: All development in this codebase MUST follow the standards defined in:
 - [Software Design Standards](./docs/SOFTWARE-DESIGN-STANDARDS.md) - **READ THIS FIRST**
