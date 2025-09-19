@@ -21,9 +21,9 @@ export function createPortal(input: CreatePortalInput): Portal {
     url: input.url,
     category: input.category,
     status: input.status,
-    environment: input.environment || PortalEnvironment.PRODUCTION,
-    priority: input.priority || PortalPriority.MEDIUM,
-    authType: input.authType || AuthType.NONE,
+    environment: input.environment || PortalEnvironment.Production,
+    priority: input.priority || PortalPriority.Medium,
+    authType: input.authType || AuthType.None,
     authConfig: input.authConfig,
     metrics: input.metrics || {
       responseTime: 0,

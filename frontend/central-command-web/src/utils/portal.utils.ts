@@ -144,19 +144,19 @@ export const calculatePortalStats = <T extends PortalResponse | Portal>(
   portals.forEach(portal => {
     // Status counts - handle different naming conventions
     switch (portal.status) {
-      case PortalStatus.OPERATIONAL:
+      case PortalStatus.Operational:
       case PortalStatus.Operational:
         stats.operational++;
         break;
-      case PortalStatus.DEGRADED:
+      case PortalStatus.Degraded:
       case PortalStatus.Degraded:
         stats.degraded++;
         break;
-      case PortalStatus.MAINTENANCE:
+      case PortalStatus.Maintenance:
       case PortalStatus.Maintenance:
         stats.maintenance++;
         break;
-      case PortalStatus.OUTAGE:
+      case PortalStatus.Outage:
       case PortalStatus.Outage:
         stats.outage++;
         break;

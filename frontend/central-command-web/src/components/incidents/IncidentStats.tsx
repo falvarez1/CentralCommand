@@ -4,20 +4,19 @@ import { Progress } from '../ui/progress';
 import { Badge } from '../ui/badge';
 import {
   Activity,
-  AlertCircle,
   AlertTriangle,
   Info,
-  CheckCircle,
-  Clock,
-  TrendingUp,
   TrendingDown,
-  Users,
+  TrendingUp,
   BarChart3,
   Timer,
-  Zap
+  Zap,
+  AlertCircle,
+  CheckCircle,
+  Clock
 } from 'lucide-react';
 import { IncidentStats as IIncidentStats, IncidentSeverity, IncidentType } from '../../types/incident.types';
-import { useIncidentStore } from '../../stores/useIncidentStore';
+import { useIncidentFilters } from '../../hooks/useIncidentFilters';
 import { cn } from '../../lib/utils';
 import { Separator } from '../ui/separator';
 
@@ -71,7 +70,7 @@ export const IncidentStats: React.FC<IncidentStatsProps> = ({
   className,
   variant = 'default'
 }) => {
-  const { incidentStats } = useIncidentStore();
+  const { incidentStats } = useIncidentFilters();
   const stats = propStats || incidentStats;
 
   const openPercentage = stats.total > 0 ? (stats.open / stats.total) * 100 : 0;

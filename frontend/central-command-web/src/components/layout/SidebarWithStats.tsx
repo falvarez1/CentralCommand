@@ -17,14 +17,9 @@ import {
   Activity,
   Settings,
   HelpCircle,
-  TrendingUp,
   TrendingDown,
-  CheckCircle,
   XCircle,
-  AlertCircle,
-  Clock,
-  Zap,
-  Database
+  Zap
 } from 'lucide-react'
 
 interface SidebarItem {
@@ -38,11 +33,8 @@ interface SidebarItem {
 export const SidebarWithStats: React.FC = () => {
   const location = useLocation()
   const { data: dashboardStats, isLoading: dashboardLoading } = useDashboardStats()
-  const { data: incidentStats, isLoading: incidentLoading } = useIncidentStats()
-  const { data: portalStats, isLoading: portalLoading } = usePortalStats()
-  const { data: uptimeSparkline } = useSparklineData('uptime', '1h')
-  const { data: responseTimeSparkline } = useSparklineData('responseTime', '1h')
-
+    const { data: portalStats, isLoading: portalLoading } = usePortalStats()
+    
   const navigationItems: SidebarItem[] = [
     {
       label: 'Dashboard',

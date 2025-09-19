@@ -4,20 +4,22 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Search,
   Bell,
-  Database,
-  Server,
+  ChevronDown,
+  Home,
+  Layout,
+  LogOut,
   Menu,
   Moon,
-  Sun,
-  Command,
-  User,
+  Package,
+  Plus,
+  Search,
   Settings,
-  LogOut,
-  ChevronDown,
-  Wifi,
-  WifiOff
+  Shield,
+  User,
+  Users,
+  Database,
+  Sun
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,13 +47,11 @@ interface HeaderProps {
   isSidebarOpen: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) => {
+function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const { dataSourceMode, apiConnected, setApiConnected } = useAppConfigStore();
   const [searchValue, setSearchValue] = useState('');
-  const [notificationCount, setNotificationCount] = useState(3);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isChecking, setIsChecking] = useState(false);
+      const [isChecking, setIsChecking] = useState(false);
 
   // Check API connection on mount and when mode changes
   useEffect(() => {
@@ -296,4 +296,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, isSidebarOpen }) =>
       </div>
     </header>
   );
-};
+}
+
+export default Header;

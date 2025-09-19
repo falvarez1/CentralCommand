@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import {
   AlertCircle,
   AlertTriangle,
   Info,
-  CheckCircle,
+
   Clock,
   Filter,
   Activity,
@@ -74,7 +74,7 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
   showFilters = true,
   className
 }) => {
-  const { filteredIncidents } = useIncidentStore();
+  const { filteredIncidents } = useIncidentFilters();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
   const incidents = propIncidents || filteredIncidents;
@@ -82,11 +82,11 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
   const getFilteredIncidents = () => {
     switch (activeFilter) {
       case 'critical':
-        return incidents.filter(i => i.severity === IncidentSeverity.Critical);
+        return incidents.filter((i: Incident) => i.severity === IncidentSeverity.Critical);
       case 'resolved':
-        return incidents.filter(i => i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed);
+        return incidents.filter((i: Incident) => i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed);
       case 'pending':
-        return incidents.filter(i => i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed);
+        return incidents.filter((i: Incident) => i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed);
       default:
         return incidents;
     }
@@ -96,9 +96,9 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
 
   const filterButtons = [
     { id: 'all' as FilterType, label: 'All', count: incidents.length },
-    { id: 'critical' as FilterType, label: 'Critical', count: incidents.filter(i => i.severity === IncidentSeverity.Critical).length },
-    { id: 'resolved' as FilterType, label: 'Resolved', count: incidents.filter(i => i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed).length },
-    { id: 'pending' as FilterType, label: 'Pending', count: incidents.filter(i => i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed).length }
+    { id: 'critical' as FilterType, label: 'Critical', count: incidents.filter((i: Incident) => i.severity === IncidentSeverity.Critical).length },
+    { id: 'resolved' as FilterType, label: 'Resolved', count: incidents.filter((i: Incident) => i.status === IncidentStatus.Resolved || i.status === IncidentStatus.Closed).length },
+    { id: 'pending' as FilterType, label: 'Pending', count: incidents.filter((i: Incident) => i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed).length }
   ];
 
   return (
@@ -143,7 +143,7 @@ export const IncidentTimeline: React.FC<IncidentTimelineProps> = ({
               <p className="text-sm text-muted-foreground">No incidents found</p>
             </div>
           ) : (
-            displayIncidents.map((incident, index) => {
+            displayIncidents.map((incident: Incident, index: number) => {
               const SeverityIcon = severityIcons[incident.severity];
               const TypeIcon = typeIcons[incident.type];
               const isResolved = incident.status === IncidentStatus.Resolved || incident.status === IncidentStatus.Closed;

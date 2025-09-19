@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   Bell,
-  BellOff,
   Volume2,
   VolumeX,
   Mail,
   Smartphone,
   MessageSquare,
   Moon,
-  Sun,
-  Clock,
-  Filter,
   Save,
   RotateCcw,
   CheckCircle2,
-  AlertCircle,
   AlertTriangle,
   Info,
   Zap

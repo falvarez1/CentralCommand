@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 interface IncidentCardProps {
   incident: Incident;
+  onClick?: () => void;
   onViewDetails?: (incident: Incident) => void;
   onInvestigate?: (incident: Incident) => void;
   onResolve?: (incident: Incident) => void;

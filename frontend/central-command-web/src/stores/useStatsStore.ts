@@ -239,8 +239,8 @@ export const useStatsStore = create<StatsState>()(
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         // Calculate portal stats
-        const activePortals = portals.filter(p => p.status === PortalStatus.OPERATIONAL).length;
-        const inactivePortals = portals.filter(p => p.status === PortalStatus.OUTAGE).length;
+        const activePortals = portals.filter(p => p.status === PortalStatus.Operational).length;
+        const inactivePortals = portals.filter(p => p.status === PortalStatus.Outage).length;
 
         // Calculate average metrics
         let totalResponseTime = 0;
@@ -262,7 +262,7 @@ export const useStatsStore = create<StatsState>()(
         const portalCount = portals.length || 1;
 
         // Calculate incident stats
-        const activeIncidents = incidents.filter(i => i.status !== IncidentStatus.RESOLVED).length;
+        const activeIncidents = incidents.filter(i => i.status !== IncidentStatus.Resolved).length;
         const resolvedToday = incidents.filter(i =>
           i.resolvedAt && i.resolvedAt >= today
         ).length;

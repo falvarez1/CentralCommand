@@ -16,23 +16,20 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import {
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  CheckCircle,
-  Clock,
-  Server,
-  MessageSquare,
   Activity,
-  TrendingUp,
+  AlertTriangle,
+  X,
   FileText,
-  Zap,
   Shield,
-  Database,
-  Wifi,
-  Lock,
+  Timer,
+  Zap,
+  Edit,
+  Trash2,
   ChevronRight,
-  Edit
+  TrendingUp,
+  Clock,
+  Database,
+  CheckCircle
 } from 'lucide-react';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentType } from '../../types/incident.types';
 import { cn } from '../../lib/utils';
@@ -42,7 +39,6 @@ interface IncidentDetailsModalProps {
   incident: Incident;
   isOpen: boolean;
   onClose: () => void;
-  onUpdateIncident?: (incident: Incident) => void;
   onAcknowledgeIncident?: (incidentId: string) => void;
   onResolveIncident?: (incidentId: string, resolution: string, rootCause?: string) => void;
   onEscalateIncident?: (incidentId: string) => void;

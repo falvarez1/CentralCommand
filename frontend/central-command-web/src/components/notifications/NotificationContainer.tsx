@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { createPortal } from 'react-dom';
+import * as ReactDOM from 'react-dom';
 import { NotificationToast } from './NotificationToast';
 import { useNotifications, useNotificationSound } from '../../hooks/useNotifications';
 import { NotificationType, NotificationPriority } from '../../types/notification.types';
@@ -23,10 +24,10 @@ interface NotificationContainerProps {
   maxVisible?: number;
 }
 
-export const NotificationContainer: React.FC<NotificationContainerProps> = ({
+export const NotificationContainer = ({
   position = 'top-right',
   maxVisible = 5
-}) => {
+}: NotificationContainerProps) => {
   const [activeNotifications, setActiveNotifications] = useState<ActiveNotification[]>([]);
   const [queue, setQueue] = useState<ActiveNotification[]>([]);
   const { playSound } = useNotificationSound();
@@ -45,8 +46,7 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
   const isBottomPosition = position.includes('bottom');
 
   // Add notification to active or queue
-  const addNotification = (notification: ActiveNotification) => {
-    setActiveNotifications(prev => {
+      setActiveNotifications(prev => {
       if (prev.length < maxVisible) {
         // Play sound based on notification type
         playSound(notification.type as 'success' | 'error' | 'warning' | 'info');
@@ -104,7 +104,7 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
 
   if (!portalContainer) return null;
 
-  return createPortal(
+  return ReactDOM.createPortal(
     <div
       className={cn(
         'fixed z-[9999] pointer-events-none',
@@ -170,7 +170,7 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
         </motion.div>
       )}
     </div>,
-    portalContainer
+    portalContainer as HTMLElement
   );
 };
 

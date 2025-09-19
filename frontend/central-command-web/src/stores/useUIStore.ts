@@ -143,7 +143,7 @@ const defaultPreferences: UIState['preferences'] = {
   keyboardShortcutsEnabled: true,
   animations: true,
   defaultView: 'dashboard',
-  defaultCategory: PortalCategory.ALL,
+  defaultCategory: PortalCategory.All,
   defaultTimeRange: TimeRange.TWENTY_FOUR_HOURS
 };
 

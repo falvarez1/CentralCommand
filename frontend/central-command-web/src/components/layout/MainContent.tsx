@@ -5,25 +5,24 @@
 import React, { useState, useMemo } from 'react';
 import {
   AlertTriangle,
-  TrendingUp,
   TrendingDown,
-  Users,
+  TrendingUp,
   Activity,
   Server,
-  AlertCircle,
   X,
-  Filter,
   LayoutGrid,
-  List
+  List,
+  Filter
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+
 import { cn } from '@/lib/utils';
 import type { Portal, SystemStats } from '@/types';
+import { TimeRange } from '@/types/stats.types';
 import { ViewMode, PortalCategory, PortalStatus } from '@/types';
 
 interface MainContentProps {
@@ -60,7 +59,7 @@ export const MainContent: React.FC<MainContentProps> = ({
   selectedCategory = 'all'
 }) => {
   const [alertDismissed, setAlertDismissed] = useState(false);
-  const [criticalAlert, setCriticalAlert] = useState({
+  const [criticalAlert] = useState({
     show: true,
     title: 'Documentation Portal Outage',
     description: 'The documentation portal is currently experiencing an outage. Our team is working to resolve the issue.',
@@ -82,22 +81,44 @@ export const MainContent: React.FC<MainContentProps> = ({
       : 0;
 
     return {
+      // Portal statistics
       totalPortals: portals.length,
       operationalPortals: operational,
       activePortals: operational,
       inactivePortals: portals.length - operational,
+
+      // Health statistics
       healthScore: avgUptime,
       systemUptime: avgUptime,
       averageResponseTime: avgResponseTime,
+
+      // Performance statistics
       totalRequests,
       totalErrors,
       errorRate: totalRequests > 0 ? (totalErrors / totalRequests) * 100 : 0,
       throughput: 0,
-      latency: avgResponseTime,
-      timestamp: new Date(),
-      trend: [],
-      alerts: [],
-      incidents: []
+
+      // Resource statistics
+      averageCpu: 0,
+      averageMemory: 0,
+      diskUsage: 0,
+      networkLatency: 0,
+
+      // Incident statistics
+      activeIncidents: 0,
+      resolvedToday: 0,
+      mttr: 0,
+      mtbf: 0,
+
+      // User statistics
+      activeUsers: 0,
+      totalUsers: 0,
+      concurrentSessions: 0,
+
+      // Time-based statistics
+      lastUpdated: new Date(),
+      timeRange: TimeRange.TwentyFourHours,
+      dataQuality: 100
     } as SystemStats;
   }, [portals, systemStats]);
   const statCards: StatCard[] = [

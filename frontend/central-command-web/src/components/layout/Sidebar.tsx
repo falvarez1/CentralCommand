@@ -4,22 +4,18 @@
 
 import React, { useState } from 'react';
 import {
-  AlertTriangle,
-  Rocket,
-  Heart,
-  Calendar,
+  Layout,
+  FileText,
   Shield,
   Activity,
-  Users,
-  Star,
-  ExternalLink,
+  BarChart3,
+  Settings,
+  HelpCircle,
   ChevronRight,
-  X,
-  Clock,
-  TrendingUp,
-  AlertCircle,
   CheckCircle,
-  Settings
+  AlertCircle,
+  Users,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';

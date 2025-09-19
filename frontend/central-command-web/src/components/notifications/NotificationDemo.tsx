@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
 import {
-  Play,
-  Code,
+
   Settings,
   Bell,
   Send,
   Rocket,
   AlertTriangle,
-  CheckCircle,
   Info,
   XCircle,
   Zap,
   GitBranch,
-  Database,
   Shield,
-  Users,
   Server,
   Activity,
   Package

@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Header } from './Header';
+import Header from './Header';
 import { Sidebar } from './Sidebar';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { usePortalStore } from '@/stores/usePortalStore';

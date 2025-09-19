@@ -378,7 +378,7 @@ export const CommandPalette: React.FC = () => {
         {/* Grouped Commands by Category */}
         {Object.entries(groupedCommands)
           .filter(([key]) => key !== 'recent' && key !== 'pinned')
-          .map(([category, categoryCommands], groupIndex) => {
+          .map(([category, categoryCommands]) => {
             if (categoryCommands.length === 0) return null;
 
             return (

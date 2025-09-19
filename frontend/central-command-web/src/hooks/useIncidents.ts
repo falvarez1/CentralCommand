@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { incidentService } from '../services/incident.service';
+import { useIncidentService, useStatisticsService } from '../contexts/ServiceContext';
 import { useIncidentStore } from '../stores/useIncidentStore';
 import { Incident, IncidentStats } from '../types/incident.types';
 import { toast } from 'sonner';
@@ -20,6 +20,8 @@ export function useIncidents() {
   } = useIncidentStore();
 
   const [stats, setStats] = useState<IncidentStats | null>(null);
+  const incidentService = useIncidentService();
+  const statisticsService = useStatisticsService();
 
   const fetchIncidents = async (params?: {
     page?: number;
@@ -69,7 +71,16 @@ export function useIncidents() {
 
   const fetchIncidentStats = async () => {
     try {
-      const statsData = await incidentService.getIncidentStats();
+      // Use the statistics service to get incident trends
+      const trends = await statisticsService.getIncidentTrends(30);
+      // Convert trends to stats format
+      const statsData: IncidentStats = {
+        total: incidents.length,
+        open: incidents.filter(i => i.status === 'open').length,
+        resolved: incidents.filter(i => i.status === 'resolved').length,
+        critical: incidents.filter(i => i.priority === 'critical').length,
+        trends: trends
+      };
       setStats(statsData);
       return statsData;
     } catch (error) {

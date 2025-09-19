@@ -268,7 +268,7 @@ const generateDefaultCommands = (): StoreCommand[] => [
     category: CommandCategory.FILTER,
     actionHandler: () => {
       usePortalStore.getState().clearFilter();
-      useUIStore.getState().setCategory(PortalCategory.ALL);
+      useUIStore.getState().setCategory(PortalCategory.All);
     },
     action: {
       type: CommandActionType.FILTER
@@ -362,7 +362,7 @@ const generateDefaultCommands = (): StoreCommand[] => [
  * Generate category-specific filter commands
  */
 const generateCategoryCommands = (): StoreCommand[] => {
-  const categories = Object.values(PortalCategory).filter(c => c !== PortalCategory.ALL);
+  const categories = Object.values(PortalCategory).filter(c => c !== PortalCategory.All);
 
   return categories.map(category => ({
     id: uuidv4(),

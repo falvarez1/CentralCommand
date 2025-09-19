@@ -16,7 +16,7 @@ export {
 export type {
   AppNotification as Notification,
   AppNotificationAction as NotificationAction,
-  AppNotificationPreferences as NotificationPreferences,
+  AppNotificationPreferences,
   ToastNotification
 } from '../../types/notification.types';
 

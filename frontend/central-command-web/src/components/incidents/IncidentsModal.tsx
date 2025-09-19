@@ -5,7 +5,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+
 } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Button } from '../ui/button';
@@ -17,7 +17,7 @@ import {
   Search,
   Plus,
   Download,
-  Filter,
+
   AlertCircle,
   CheckCircle,
   Clock,
@@ -27,7 +27,7 @@ import {
   FileText
 } from 'lucide-react';
 import { Incident, IncidentStatus, IncidentSeverity } from '../../types/incident.types';
-import { useIncidentStore } from '../../stores/useIncidentStore';
+import { useIncidentFilters } from '../../hooks/useIncidentFilters';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import IncidentCard from './IncidentCard';
@@ -45,11 +45,8 @@ export const IncidentsModal: React.FC<IncidentsModalProps> = ({
 }) => {
   const {
     incidents,
-    incidentStats,
-    setFilter,
-    clearFilter,
-    filteredIncidents
-  } = useIncidentStore();
+    incidentStats
+  } = useIncidentFilters();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'resolved' | 'all'>('active');

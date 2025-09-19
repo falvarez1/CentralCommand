@@ -1,6 +1,6 @@
 import React from 'react'
 import { useIncidents } from '@/hooks/queries/useIncidentQueries'
-import { IncidentCard } from './IncidentCard'
+import IncidentCard from './IncidentCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -91,7 +91,7 @@ export const IncidentListWithAPI: React.FC<IncidentListWithAPIProps> = ({
         <IncidentCard
           key={incident.id}
           incident={incident}
-          onClick={() => onIncidentClick?.(incident)}
+          onClick={onIncidentClick ? () => onIncidentClick(incident) : undefined}
         />
       ))}
     </div>
