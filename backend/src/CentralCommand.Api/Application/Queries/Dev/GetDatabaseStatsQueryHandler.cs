@@ -1,23 +1,22 @@
-using CentralCommand.Api.Infrastructure.Data;
 using CentralCommand.Core.Interfaces.Repositories;
+using CentralCommand.Core.Interfaces.Services;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace CentralCommand.Api.Application.Queries.Dev;
 
 public class GetDatabaseStatsQueryHandler : IRequestHandler<GetDatabaseStatsQuery, DatabaseStatsResponse>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ApplicationDbContext _context;
+    private readonly IDatabaseMetadataService _databaseMetadata;
     private readonly ILogger<GetDatabaseStatsQueryHandler> _logger;
 
     public GetDatabaseStatsQueryHandler(
         IUnitOfWork unitOfWork,
-        ApplicationDbContext context,
+        IDatabaseMetadataService databaseMetadata,
         ILogger<GetDatabaseStatsQueryHandler> logger)
     {
         _unitOfWork = unitOfWork;
-        _context = context;
+        _databaseMetadata = databaseMetadata;
         _logger = logger;
     }
 
@@ -47,8 +46,8 @@ public class GetDatabaseStatsQueryHandler : IRequestHandler<GetDatabaseStatsQuer
             {
                 Database = new DatabaseStatsResponse.DatabaseInfo
                 {
-                    Provider = _context.Database.ProviderName ?? string.Empty,
-                    CanConnect = await _context.Database.CanConnectAsync(cancellationToken)
+                    Provider = _databaseMetadata.GetProviderName(),
+                    CanConnect = await _databaseMetadata.CanConnectAsync(cancellationToken)
                 },
                 Counts = new DatabaseStatsResponse.EntityCounts
                 {

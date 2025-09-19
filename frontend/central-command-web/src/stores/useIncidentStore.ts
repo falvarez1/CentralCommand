@@ -2,9 +2,6 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { v4 as uuidv4 } from 'uuid';
-import { incidentsService } from '../lib/api/services/incidents.service';
-import { useAppConfigStore } from './useAppConfigStore';
-import { toast } from 'sonner';
 import {
   Incident,
   IncidentSeverity,
@@ -61,14 +58,9 @@ interface IncidentState {
   linkIncidents: (id: string, relatedIds: string[]) => void;
   linkToPortal: (incidentId: string, portalId: string) => void;
 
-  // Sync actions
-  syncIncidents: () => Promise<void>;
-  fetchIncidentsFromApi: () => Promise<void>;
-  fetchIncidentStatsFromApi: () => Promise<void>;
+  // State management
   setError: (error: string | null) => void;
-
-  // Initialize
-  initialize: () => Promise<void>;
+  setLoading: (loading: boolean) => void;
 }
 
 export const useIncidentStore = create<IncidentState>()(
@@ -427,124 +419,14 @@ export const useIncidentStore = create<IncidentState>()(
           }
         }),
 
-        syncIncidents: async () => {
-          const { dataSourceMode } = useAppConfigStore.getState();
-
-          set(state => {
-            state.isLoading = true;
-            state.error = null;
-          });
-
-          try {
-            // Always fetch from API (which will use the correct endpoint based on mode)
-            await get().fetchIncidentsFromApi();
-          } catch (error) {
-            console.error('Failed to sync incidents:', error);
-
-            // If API fails and we're in real mode, try to seed the database
-            if (dataSourceMode === 'real' && get().incidents.length === 0) {
-              try {
-                // Try to seed the database
-                const response = await fetch('http://localhost:5000/api/v1/dev/seed', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' }
-                });
-
-                if (response.ok) {
-                  // Retry fetching incidents after seeding
-                  await get().fetchIncidentsFromApi();
-                  toast.success('Database initialized with sample data');
-                }
-              } catch (seedError) {
-                console.error('Failed to seed database:', seedError);
-              }
-            }
-
-            // Show error if no data available
-            if (get().incidents.length === 0) {
-              set(state => {
-                state.isLoading = false;
-                state.error = 'Unable to connect to API. Check if the backend is running.';
-              });
-              toast.error('Connection Failed', {
-                description: 'Unable to connect to API. Check if the backend is running.'
-              });
-            }
-          }
-        },
-
-        fetchIncidentsFromApi: async () => {
-          set(state => {
-            state.isLoading = true;
-            state.error = null;
-          });
-
-          try {
-            const response = await incidentsService.getIncidents({
-              pageSize: 100, // Get more incidents for demo
-              sortBy: 'createdAt',
-              sortOrder: 'desc'
-            });
-
-            // Map API response to store format
-            const incidents = response.items.map((item: any) => ({
-              ...item,
-              createdAt: new Date(item.createdAt),
-              updatedAt: new Date(item.updatedAt),
-              resolvedAt: item.resolvedAt ? new Date(item.resolvedAt) : undefined,
-              acknowledgedAt: item.acknowledgedAt ? new Date(item.acknowledgedAt) : undefined,
-              closedAt: item.closedAt ? new Date(item.closedAt) : undefined,
-              timeline: item.timeline || [],
-              affectedPortals: item.affectedPortals || [],
-              affectedServices: item.affectedServices || [],
-              tags: item.tags || [],
-              relatedIncidents: item.relatedIncidents || []
-            }));
-
-            set(state => {
-              state.incidents = incidents;
-              state.isLoading = false;
-            });
-
-            // Update API connection status
-            useAppConfigStore.getState().setApiConnected(true);
-
-          } catch (error) {
-            console.error('Failed to fetch incidents from API:', error);
-            set(state => {
-              state.error = error instanceof Error ? error.message : 'Failed to fetch incidents from API';
-              state.isLoading = false;
-            });
-
-            // Update API connection status
-            useAppConfigStore.getState().setApiConnected(false);
-
-            // Show error toast
-            toast.error('Failed to fetch incidents', {
-              description: 'Unable to connect to the API. Please check your connection.'
-            });
-          }
-        },
-
-        fetchIncidentStatsFromApi: async () => {
-          try {
-            const stats = await incidentsService.getIncidentStats();
-            // Stats will be used directly by components that need them
-            return stats;
-          } catch (error) {
-            console.error('Failed to fetch incident stats from API:', error);
-            return null;
-          }
-        },
 
         setError: (error) => set(state => {
           state.error = error;
         }),
 
-        initialize: async () => {
-          // Always sync with the configured data source on initialization
-          await get().syncIncidents();
-        }
+        setLoading: (loading) => set(state => {
+          state.isLoading = loading;
+        })
       })),
       {
         name: 'incident-store',

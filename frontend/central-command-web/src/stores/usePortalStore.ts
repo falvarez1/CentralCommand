@@ -21,82 +21,6 @@ import {
   AuthType
 } from '../types/portal.types';
 
-/**
- * Mock data generator for portals
- */
-const generateMockPortals = (): Portal[] => {
-  const categories = Object.values(PortalCategory).filter(c => c !== PortalCategory.All);
-  const statuses = Object.values(PortalStatus);
-  const environments = Object.values(PortalEnvironment);
-  const priorities = Object.values(PortalPriority);
-
-  const portalNames = [
-    { name: 'Grafana Dashboard', category: PortalCategory.Operations, url: 'https://grafana.internal' },
-    { name: 'Prometheus Metrics', category: PortalCategory.Operations, url: 'https://prometheus.internal' },
-    { name: 'Kibana Logs', category: PortalCategory.Security, url: 'https://kibana.internal' },
-    { name: 'Jenkins CI/CD', category: PortalCategory.Engineering, url: 'https://jenkins.internal' },
-    { name: 'GitLab', category: PortalCategory.Engineering, url: 'https://gitlab.internal' },
-    { name: 'Kubernetes Dashboard', category: PortalCategory.Engineering, url: 'https://k8s.internal' },
-    { name: 'PostgreSQL Admin', category: PortalCategory.Engineering, url: 'https://pgadmin.internal' },
-    { name: 'MongoDB Atlas', category: PortalCategory.Engineering, url: 'https://mongodb.internal' },
-    { name: 'SonarQube', category: PortalCategory.Engineering, url: 'https://sonarqube.internal' },
-    { name: 'Vault Secrets', category: PortalCategory.Security, url: 'https://vault.internal' },
-    { name: 'Confluence Wiki', category: PortalCategory.Business, url: 'https://confluence.internal' },
-    { name: 'JIRA Board', category: PortalCategory.Business, url: 'https://jira.internal' },
-    { name: 'Slack Gateway', category: PortalCategory.Support, url: 'https://slack-gateway.internal' },
-    { name: 'Email Service', category: PortalCategory.Support, url: 'https://email.internal' },
-    { name: 'API Gateway', category: PortalCategory.Operations, url: 'https://api-gateway.internal' }
-  ];
-
-  return portalNames.map((portal, index) => ({
-    id: uuidv4(),
-    name: portal.name,
-    description: `Enterprise ${portal.name} for internal operations and monitoring`,
-    url: portal.url,
-    category: portal.category,
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    environment: environments[Math.floor(Math.random() * environments.length)],
-    priority: priorities[Math.floor(Math.random() * priorities.length)],
-    authType: AuthType.OAUTH,
-    authConfig: {},
-    metrics: {
-      responseTime: Math.floor(Math.random() * 500) + 50,
-      uptime: 95 + Math.random() * 5,
-      cpu: Math.random() * 100,
-      memory: Math.random() * 100,
-      requests: Math.floor(Math.random() * 10000),
-      errors: Math.floor(Math.random() * 100),
-      errorRate: Math.random() * 5,
-      throughput: Math.floor(Math.random() * 1000),
-      latency: Math.floor(Math.random() * 100)
-    },
-    lastChecked: new Date(),
-    lastIncident: index % 3 === 0 ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000) : undefined,
-    config: {
-      healthCheckEndpoint: `${portal.url}/health`,
-      healthCheckInterval: 30,
-      timeout: 5000,
-      retryAttempts: 3,
-      retryDelay: 1000,
-      enableMonitoring: true,
-      enableAlerts: true,
-      enableAutoRecovery: false
-    },
-    icon: '🌐',
-    color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
-    tags: ['production', 'critical'].slice(0, Math.floor(Math.random() * 2) + 1),
-    isFavorite: index < 3,
-    isPublic: index % 2 === 0,
-    owner: uuidv4(),
-    team: uuidv4(),
-    maintainers: [uuidv4(), uuidv4()],
-    createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
-    updatedAt: new Date(),
-    createdBy: uuidv4(),
-    updatedBy: uuidv4()
-  }));
-};
-
 interface PortalState {
   // State
   portals: Portal[];
@@ -142,12 +66,9 @@ interface PortalState {
   updateAllMetrics: () => void;
   simulateRealtimeUpdates: () => void;
 
-  // Sync actions
-  syncPortals: () => Promise<void>;
+  // State management
   setError: (error: string | null) => void;
-
-  // Initialize
-  initialize: () => void;
+  setLoading: (loading: boolean) => void;
 }
 
 export const usePortalStore = create<PortalState>()(
@@ -527,53 +448,18 @@ export const usePortalStore = create<PortalState>()(
           }, 30000);
         },
 
-        syncPortals: async () => {
-          set(state => {
-            state.isLoading = true;
-            state.error = null;
-          });
+        setLoading: (loading) => set(state => {
+          state.isLoading = loading;
+        }),
 
-          try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // In real app, would fetch from API
-            // const response = await fetch('/api/portals');
-            // const portals = await response.json();
-
-            set(state => {
-              state.lastSync = new Date();
-              state.isLoading = false;
-            });
-          } catch (error) {
-            set(state => {
-              state.error = error instanceof Error ? error.message : 'Failed to sync portals';
-              state.isLoading = false;
-            });
-          }
+        simulateRealtimeUpdates: () => {
+          // This method is now a no-op since real-time updates come from services
+          // Components should subscribe to updates directly from the service layer
         },
 
         setError: (error) => set(state => {
           state.error = error;
-        }),
-
-        initialize: () => {
-          set(state => { state.portals = generateMockPortals(); });
-          get().simulateRealtimeUpdates();
-        },
-      
-        // Aliases for App.tsx compatibility
-        initializePortals: () => {
-          get().initialize();
-        },
-
-        startRealTimeUpdates: () => {
-          get().simulateRealtimeUpdates();
-          // Return cleanup function
-          return () => {
-            // In a real app, we'd clear intervals here
-          };
-        }
+        })
       }),
       {
         name: 'portal-store',

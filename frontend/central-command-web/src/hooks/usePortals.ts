@@ -2,6 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { usePortalStore } from '../stores/usePortalStore';
 import { useUIStore } from '../stores/useUIStore';
 import { Portal, PortalFilter } from '../types/portal.types';
+import { portalService } from '../services/portal.service';
+import { toast } from 'sonner';
 
 /**
  * Custom hook for portal data with filtering and real-time updates
@@ -23,8 +25,9 @@ export function usePortals() {
     clearFilter,
     updatePortalMetrics,
     updateAllMetrics,
-    syncPortals,
-    initialize
+    setPortals,
+    setLoading,
+    setError
   } = usePortalStore();
 
   const {
@@ -33,10 +36,49 @@ export function usePortals() {
     selectedTimeRange
   } = useUIStore();
 
+  // Fetch portals from API
+  const fetchPortals = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await portalService.getPortals({
+        pageSize: 100,
+        sortBy: 'name',
+        sortOrder: 'asc'
+      });
+
+      // Map API response to store format
+      const mappedPortals = response.items.map((item: any) => ({
+        ...item,
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+        lastChecked: item.lastChecked ? new Date(item.lastChecked) : new Date(),
+        lastIncident: item.lastIncident ? new Date(item.lastIncident) : undefined,
+        metrics: item.metrics || {},
+        config: item.config || {},
+        tags: item.tags || [],
+        maintainers: item.maintainers || []
+      }));
+
+      setPortals(mappedPortals);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch portals';
+      setError(errorMessage);
+      toast.error('Failed to fetch portals', {
+        description: errorMessage
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Initialize portals on mount
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    if (portals.length === 0) {
+      fetchPortals();
+    }
+  }, []);
 
   // Update filter when UI state changes
   useEffect(() => {
@@ -115,7 +157,7 @@ export function usePortals() {
     clearSelection,
     clearFilter,
     updatePortalMetrics,
-    syncPortals
+    refresh: fetchPortals
   };
 }
 

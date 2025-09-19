@@ -13,6 +13,7 @@ using CentralCommand.Api.Infrastructure.Services;
 using CentralCommand.Api.Repositories;
 using CentralCommand.Api.Services;
 using CentralCommand.Core.Interfaces.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +44,7 @@ builder.Host.UseSerilog();
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -288,6 +290,7 @@ builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 
 // Register data seeding service for development
 builder.Services.AddScoped<IDataSeedingService, DevelopmentDataSeedingService>();
+builder.Services.AddScoped<IDatabaseMetadataService, DatabaseMetadataService>();
 
 // Register background services
 builder.Services.AddHostedService<MetricsCollectionService>();

@@ -1,21 +1,20 @@
-using CentralCommand.Api.Infrastructure.Data;
+using CentralCommand.Core.Interfaces.Services;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace CentralCommand.Api.Application.Queries.Dev;
 
 public class CheckDatabaseHealthQueryHandler : IRequestHandler<CheckDatabaseHealthQuery, DatabaseHealthResponse>
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDatabaseMetadataService _databaseMetadata;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<CheckDatabaseHealthQueryHandler> _logger;
 
     public CheckDatabaseHealthQueryHandler(
-        ApplicationDbContext context,
+        IDatabaseMetadataService databaseMetadata,
         IWebHostEnvironment environment,
         ILogger<CheckDatabaseHealthQueryHandler> logger)
     {
-        _context = context;
+        _databaseMetadata = databaseMetadata;
         _environment = environment;
         _logger = logger;
     }
@@ -26,14 +25,14 @@ public class CheckDatabaseHealthQueryHandler : IRequestHandler<CheckDatabaseHeal
     {
         try
         {
-            var canConnect = await _context.Database.CanConnectAsync(cancellationToken);
+            var canConnect = await _databaseMetadata.CanConnectAsync(cancellationToken);
 
             if (!canConnect)
             {
                 return new DatabaseHealthResponse
                 {
                     Status = "unhealthy",
-                    Database = _context.Database.ProviderName ?? string.Empty,
+                    Database = _databaseMetadata.GetProviderName(),
                     Environment = _environment.EnvironmentName,
                     Error = "Cannot connect to database"
                 };
@@ -42,7 +41,7 @@ public class CheckDatabaseHealthQueryHandler : IRequestHandler<CheckDatabaseHeal
             return new DatabaseHealthResponse
             {
                 Status = "healthy",
-                Database = _context.Database.ProviderName ?? string.Empty,
+                Database = _databaseMetadata.GetProviderName(),
                 Environment = _environment.EnvironmentName
             };
         }
@@ -52,7 +51,7 @@ public class CheckDatabaseHealthQueryHandler : IRequestHandler<CheckDatabaseHeal
             return new DatabaseHealthResponse
             {
                 Status = "unhealthy",
-                Database = _context.Database.ProviderName ?? string.Empty,
+                Database = _databaseMetadata.GetProviderName(),
                 Environment = _environment.EnvironmentName,
                 Error = ex.Message
             };
