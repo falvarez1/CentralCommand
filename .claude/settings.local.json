@@ -3,7 +3,9 @@
     "allow": [
       "Bash(dir:*)",
       "mcp__context7__resolve-library-id",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(dotnet build:*)"
     ],
     "deny": [],
     "ask": []

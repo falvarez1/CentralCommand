@@ -1,0 +1,230 @@
+import { useState, useEffect } from 'react'
+import { AppLayout } from '@/components/layout'
+import { useIncidentStore } from '@/stores/useIncidentStore'
+import { useAppConfigStore } from '@/stores/useAppConfigStore'
+import { IncidentSeverity, IncidentStatus } from '@/types'
+import { IncidentCard, IncidentDetailsModal, CreateIncidentModal, IncidentStats, IncidentTimeline } from '@/components/incidents'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Search, Filter, AlertTriangle, Clock, CheckCircle2, XCircle } from 'lucide-react'
+
+export const IncidentsPage = () => {
+  const { incidents, stats, filterBySeverity, filterByStatus, searchIncidents, syncIncidents, isLoading } = useIncidentStore()
+  const { dataSourceMode } = useAppConfigStore()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedSeverity, setSelectedSeverity] = useState<IncidentSeverity | 'all'>('all')
+  const [selectedStatus, setSelectedStatus] = useState<IncidentStatus | 'all'>('all')
+  const [selectedIncident, setSelectedIncident] = useState<any>(null)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+
+  // Load incidents when component mounts or data source changes
+  useEffect(() => {
+    syncIncidents()
+  }, [dataSourceMode])
+
+  // Filter incidents based on search and filters
+  const filteredIncidents = incidents.filter(incident => {
+    const matchesSearch = searchTerm === '' ||
+      incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      incident.description.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesSeverity = selectedSeverity === 'all' || incident.severity === selectedSeverity
+    const matchesStatus = selectedStatus === 'all' || incident.status === selectedStatus
+
+    return matchesSearch && matchesSeverity && matchesStatus
+  })
+
+  const getSeverityIcon = (severity: IncidentSeverity) => {
+    switch (severity) {
+      case IncidentSeverity.Critical:
+        return <AlertTriangle className="h-4 w-4 text-red-500" />
+      case IncidentSeverity.High:
+        return <AlertTriangle className="h-4 w-4 text-orange-500" />
+      case IncidentSeverity.Medium:
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />
+      case IncidentSeverity.Low:
+        return <AlertTriangle className="h-4 w-4 text-blue-500" />
+      default:
+        return <AlertTriangle className="h-4 w-4" />
+    }
+  }
+
+  const getStatusIcon = (status: IncidentStatus) => {
+    switch (status) {
+      case IncidentStatus.Open:
+        return <Clock className="h-4 w-4 text-blue-500" />
+      case IncidentStatus.InProgress:
+        return <Clock className="h-4 w-4 text-yellow-500" />
+      case IncidentStatus.Resolved:
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />
+      case IncidentStatus.Closed:
+        return <XCircle className="h-4 w-4 text-gray-500" />
+      default:
+        return <Clock className="h-4 w-4" />
+    }
+  }
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Incidents</h1>
+            <p className="text-muted-foreground">Manage and track system incidents</p>
+          </div>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Report Incident
+          </Button>
+        </div>
+
+        {/* Stats */}
+        <IncidentStats />
+
+        {/* Filters */}
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search incidents..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={selectedSeverity} onValueChange={(value) => setSelectedSeverity(value as IncidentSeverity | 'all')}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter by severity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Severities</SelectItem>
+              <SelectItem value={IncidentSeverity.Critical}>Critical</SelectItem>
+              <SelectItem value={IncidentSeverity.High}>High</SelectItem>
+              <SelectItem value={IncidentSeverity.Medium}>Medium</SelectItem>
+              <SelectItem value={IncidentSeverity.Low}>Low</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as IncidentStatus | 'all')}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value={IncidentStatus.Open}>Open</SelectItem>
+              <SelectItem value={IncidentStatus.InProgress}>In Progress</SelectItem>
+              <SelectItem value={IncidentStatus.Resolved}>Resolved</SelectItem>
+              <SelectItem value={IncidentStatus.Closed}>Closed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span className="text-muted-foreground">
+                {dataSourceMode === 'real' ? 'Loading from API...' : 'Loading mock data...'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Tabs for different views */}
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList>
+            <TabsTrigger value="all">
+              All Incidents
+              <Badge variant="secondary" className="ml-2">
+                {incidents.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="active">
+              Active
+              <Badge variant="destructive" className="ml-2">
+                {incidents.filter(i => i.status === IncidentStatus.Open || i.status === IncidentStatus.InProgress).length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="resolved">
+              Resolved
+              <Badge variant="secondary" className="ml-2">
+                {incidents.filter(i => i.status === IncidentStatus.Resolved).length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="timeline">Timeline View</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredIncidents.map(incident => (
+                <div
+                  key={incident.id}
+                  onClick={() => setSelectedIncident(incident)}
+                  className="cursor-pointer"
+                >
+                  <IncidentCard incident={incident} />
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="active" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredIncidents
+                .filter(i => i.status === IncidentStatus.Open || i.status === IncidentStatus.InProgress)
+                .map(incident => (
+                  <div
+                    key={incident.id}
+                    onClick={() => setSelectedIncident(incident)}
+                    className="cursor-pointer"
+                  >
+                    <IncidentCard incident={incident} />
+                  </div>
+                ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="resolved" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredIncidents
+                .filter(i => i.status === IncidentStatus.Resolved)
+                .map(incident => (
+                  <div
+                    key={incident.id}
+                    onClick={() => setSelectedIncident(incident)}
+                    className="cursor-pointer"
+                  >
+                    <IncidentCard incident={incident} />
+                  </div>
+                ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="timeline" className="space-y-4">
+            <IncidentTimeline incidents={filteredIncidents} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Modals */}
+        {selectedIncident && (
+          <IncidentDetailsModal
+            incident={selectedIncident}
+            isOpen={!!selectedIncident}
+            onClose={() => setSelectedIncident(null)}
+          />
+        )}
+
+        <CreateIncidentModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+        />
+      </div>
+    </AppLayout>
+  )
+}

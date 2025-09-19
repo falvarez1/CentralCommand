@@ -1,202 +1,200 @@
-# Central Command - Enterprise Portal Management System
+# Central Command
 
-A comprehensive enterprise portal management system built with React, TypeScript, and .NET Core, organized as a monorepo for optimal development experience.
+An enterprise portal management system for monitoring and managing service portals, tracking incidents, and providing real-time metrics.
 
 ## 🏗️ Architecture
 
-This project uses a monorepo structure managed with npm workspaces and Turbo for efficient builds.
+Central Command follows clean architecture principles with a monorepo structure:
+
+- **Clean Architecture** - Domain-driven design with clear layer separation
+- **CQRS Pattern** - Command/Query separation using MediatR
+- **Repository Pattern** - Data access abstraction
+- **No AutoMapper** - Simple extension methods for object mapping
+- **Rich Domain Models** - Business logic in entities
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
+
+## 📁 Project Structure
 
 ```
-central-command/
-├── apps/                   # Applications
-│   ├── web/               # React frontend application
-│   └── api/               # Backend services
-│       ├── CentralCommand.Api/      # Main API service
-│       └── CentralCommand.MockApi/  # Mock API for development
-├── packages/              # Shared packages
-│   ├── shared-types/     # TypeScript types shared across projects
-│   └── ui-components/    # Shared React components
-├── docs/                  # Documentation
-│   ├── api/              # API documentation
-│   ├── architecture/     # Architecture decisions
-│   └── prototype/        # HTML prototypes
-├── scripts/              # Build and deployment scripts
-└── docker/               # Docker configurations
+CentralCommand/
+├── apps/api/                    # Backend applications
+│   ├── CentralCommand.Api/      # Main API (.NET 9)
+│   └── CentralCommand.MockApi/  # Mock API for development
+├── libs/                         # Shared libraries
+│   └── CentralCommand.Core/     # Domain models, DTOs, interfaces
+├── central-command-react/        # React frontend
+├── prototype/                    # HTML prototype
+└── docs/                        # Documentation
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+- .NET 9 SDK
+- Node.js 18+
+- SQL Server (or use in-memory database for development)
 
-- Node.js 18+ and npm 9+
-- .NET 8.0 SDK
-- Git
-
-### Installation
+### Backend API
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/central-command.git
-cd central-command
+# Build the solution
+dotnet build
 
-# Install all dependencies
+# Run the main API
+cd backend/src/CentralCommand.Api
+dotnet run --urls http://localhost:5000
+
+# Or run the mock API for development
+cd backend/src/CentralCommand.MockApi
+dotnet run --urls http://localhost:5001
+```
+
+### Frontend Application
+
+```bash
+cd central-command-react
 npm install
-npm run install:all
+npm run dev
 ```
 
-### Development
+Access the application at http://localhost:5173
 
-```bash
-# Run all services (recommended)
-npm run dev:all
+## 🛠️ Technology Stack
 
-# Or run services individually
-npm run dev:web    # Start React app only
-npm run dev:api    # Start Mock API only
-```
+### Backend
+- **.NET 9** - Latest framework features
+- **ASP.NET Core** - Web API
+- **Entity Framework Core** - ORM
+- **MediatR** - CQRS implementation
+- **FluentValidation** - Input validation
+- **SignalR** - Real-time updates
+- **Serilog** - Structured logging
 
-### Access Points
+### Frontend
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tooling
+- **Zustand** - State management
+- **TanStack Query** - Server state
+- **Tailwind CSS** - Styling
 
-- **React App**: http://localhost:5173
-- **Mock API**: http://localhost:5000
-- **API Swagger**: http://localhost:5000/swagger
+## 📚 Documentation
 
-## 📦 Project Structure
+- [Architecture Overview](./ARCHITECTURE.md) - System design and patterns
+- [Development Guidelines](./CLAUDE.md) - Coding standards and practices
+- [Software Design Standards](./docs/SOFTWARE-DESIGN-STANDARDS.md) - Design principles
+- [API Design](./API-Design-Document.md) - API specifications
 
-### Apps
+## 🔑 Key Features
 
-#### Web (`apps/web`)
-- Modern React 19 application
-- TypeScript 5.x with strict mode
-- Vite for fast development
-- TailwindCSS for styling
-- Zustand for state management
-- TanStack Query for server state
+### Portal Management
+- Monitor service portals with real-time metrics
+- Track portal health and availability
+- Configure health checks and alerts
+- Organize portals by category and environment
 
-#### API (`apps/api`)
-- **CentralCommand.Api**: Production API service
-- **CentralCommand.MockApi**: Development mock API with realistic data
-  - SignalR for real-time updates
-  - In-memory data storage
-  - Bogus for data generation
+### Incident Tracking
+- Create and manage incidents
+- Track incident timeline and comments
+- Assign priorities and severities
+- Link incidents to affected portals
 
-### Packages
+### Metrics & Analytics
+- Real-time performance metrics
+- Historical data visualization
+- System-wide statistics
+- Sparkline charts for trends
 
-#### Shared Types (`packages/shared-types`)
-Shared TypeScript definitions used across web and API projects.
+### Real-time Updates
+- SignalR for live metric updates
+- Automatic dashboard refresh
+- Push notifications for critical events
+- Background metric collection
 
-#### UI Components (`packages/ui-components`)
-Reusable React components that can be shared across multiple frontend applications.
+## 🏛️ Architecture Highlights
 
-## 🛠️ Available Scripts
+### Clean Architecture Layers
+1. **Domain Layer** (Core) - Business logic and entities
+2. **Application Layer** - Use cases and orchestration
+3. **Infrastructure Layer** - External concerns
+4. **Presentation Layer** - API controllers
 
-### Root Level Commands
-
-```bash
-# Development
-npm run dev          # Start web app
-npm run dev:all      # Start all services
-npm run dev:web      # Start web app only
-npm run dev:api      # Start API only
-
-# Building
-npm run build        # Build web app
-npm run build:all    # Build everything
-npm run build:web    # Build web app only
-npm run build:api    # Build API only
-
-# Testing
-npm run test         # Run tests
-npm run test:e2e     # Run E2E tests
-
-# Code Quality
-npm run lint         # Lint code
-npm run format       # Format code with Prettier
-
-# Maintenance
-npm run clean        # Clean all build artifacts
-```
+### Key Patterns
+- **CQRS** - Separate commands and queries
+- **Repository Pattern** - Abstract data access
+- **Value Objects** - Encapsulate domain concepts
+- **Extension Methods** - Simple object mapping
+- **Domain Events** - Decouple business logic
 
 ## 🧪 Testing
 
 ```bash
-# Unit tests
+# Run backend tests
+dotnet test
+
+# Run frontend tests
+cd central-command-react
 npm run test
-
-# E2E tests with Playwright
 npm run test:e2e
-
-# Visual regression tests
-npm run test:visual
-
-# Test with UI
-npm run test:ui
 ```
 
-## 📚 Documentation
+## 🔧 Configuration
 
-- [API Documentation](./docs/api/README.md)
-- [Architecture Decisions](./docs/architecture/README.md)
-- [Development Guide](./docs/DEVELOPMENT.md)
-- [Deployment Guide](./docs/DEPLOYMENT.md)
+### API Configuration
+Configuration is managed through `appsettings.json`:
+- Connection strings
+- JWT settings
+- CORS policies
+- Logging configuration
 
-## 🏃‍♂️ Features
-
-### Portal Management
-- Real-time portal monitoring
-- Health check configuration
-- Metrics tracking and visualization
-- Alert management
-
-### Incident Management
-- Create and track incidents
-- Severity levels and prioritization
-- Comment system
-- Resolution tracking
-
-### Dashboard Features
-- Real-time metrics updates via SignalR
-- Command palette (Cmd/Ctrl + K)
-- Dark/Light theme support
-- Responsive design
-- Keyboard shortcuts
-
-### Security Features
-- OAuth 2.0 authentication
-- SAML support
-- API key management
-- Role-based access control
-
-## 🐳 Docker Support
-
+### Environment Variables
 ```bash
-# Build and run with Docker Compose
-docker-compose up
+# Database
+ConnectionStrings__DefaultConnection=Server=...
 
-# Build images individually
-docker build -f docker/Dockerfile.web -t central-command-web .
-docker build -f docker/Dockerfile.api -t central-command-api .
+# Authentication
+Jwt__Key=your-secret-key
+Jwt__Issuer=your-issuer
+Jwt__Audience=your-audience
+
+# API Keys
+ApiKey__Value=your-api-key
+```
+
+## 📦 Building for Production
+
+### Backend
+```bash
+dotnet publish -c Release -o ./publish
+```
+
+### Frontend
+```bash
+cd central-command-react
+npm run build
 ```
 
 ## 🤝 Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+1. Follow the [Software Design Standards](./docs/SOFTWARE-DESIGN-STANDARDS.md)
+2. Write tests for new features
+3. Update documentation as needed
+4. Submit pull requests for review
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+[Your License Here]
 
-## 🙏 Acknowledgments
+## 🔗 Related Projects
 
-- Built with React, TypeScript, and .NET Core
-- UI components from shadcn/ui
-- Icons from Lucide React
-- Real-time updates powered by SignalR
+- [Central Command React](./central-command-react/README.md) - Frontend documentation
+- [Mock API](./backend/src/CentralCommand.MockApi/README.md) - Mock API documentation
+
+## 👥 Team
+
+[Your Team Information]
 
 ## 📞 Support
 
-For support, please create an issue in the GitHub repository or contact the development team.
-
----
-
-**Central Command** - Unified Portal Management for the Enterprise
+[Your Support Information]
