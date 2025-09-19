@@ -1,111 +1,195 @@
-import type { PortalResponse } from '@/types/api';
-import { PortalStatus, PortalCategory, PortalEnvironment } from '@/types/api';
+import type { PortalResponse } from '../types/service.types';
+import {
+  PortalStatus,
+  PortalCategory,
+  PortalEnvironment,
+  PortalPriority,
+  Portal,
+  PortalFilter,
+  PortalStats
+} from '../types/portal.types';
 
-export interface PortalFilter {
-  status?: PortalStatus;
-  category?: PortalCategory;
-  environment?: PortalEnvironment;
-  search?: string;
-  isFavorite?: boolean;
-  hasIncidents?: boolean;
-}
-
-export interface PortalStats {
-  total: number;
-  online: number;
-  offline: number;
-  degraded: number;
-  maintenance: number;
-  byCategory: Record<string, number>;
-  byEnvironment: Record<string, number>;
-  averageUptime: number;
-  averageResponseTime: number;
-}
-
-export const filterPortals = (
-  portals: PortalResponse[],
-  filter: PortalFilter
-): PortalResponse[] => {
+/**
+ * Comprehensive portal filtering with multiple criteria support
+ * Handles both PortalResponse (from API) and Portal (from store) types
+ */
+export const filterPortals = <T extends PortalResponse | Portal>(
+  portals: T[],
+  filter: PortalFilter,
+  searchTerm?: string,
+  selectedCategory?: string
+): T[] => {
   return portals.filter(portal => {
-    if (filter.status && portal.status !== filter.status) return false;
-    if (filter.category && portal.category !== filter.category) return false;
-    if (filter.environment && portal.environment !== filter.environment) return false;
-    if (filter.isFavorite && !portal.isFavorite) return false;
-    if (filter.hasIncidents && (!portal.incidentCount || portal.incidentCount === 0)) return false;
+    // Category filter from selectedCategory
+    if (selectedCategory && selectedCategory !== 'all' && portal.category !== selectedCategory) {
+      return false;
+    }
 
-    if (filter.search) {
-      const searchLower = filter.search.toLowerCase();
-      const matchesSearch =
-        portal.name.toLowerCase().includes(searchLower) ||
-        portal.description?.toLowerCase().includes(searchLower) ||
-        portal.url.toLowerCase().includes(searchLower);
-      if (!matchesSearch) return false;
+    // Category filter from filter object
+    if (filter.category && filter.category !== PortalCategory.All && portal.category !== filter.category) {
+      return false;
+    }
+
+    // Status filter - handle both single and array
+    if (filter.status) {
+      const statusArray = Array.isArray(filter.status) ? filter.status : [filter.status];
+      if (statusArray.length > 0 && !statusArray.includes(portal.status)) {
+        return false;
+      }
+    }
+
+    // Environment filter - handle both single and array
+    if (filter.environment) {
+      const envArray = Array.isArray(filter.environment) ? filter.environment : [filter.environment];
+      if (envArray.length > 0 && !envArray.includes(portal.environment)) {
+        return false;
+      }
+    }
+
+    // Priority filter - handle both single and array
+    if (filter.priority && 'priority' in portal) {
+      const priorityArray = Array.isArray(filter.priority) ? filter.priority : [filter.priority];
+      if (priorityArray.length > 0 && !priorityArray.includes(portal.priority)) {
+        return false;
+      }
+    }
+
+    // Search term filter
+    const search = searchTerm || filter.searchTerm;
+    if (search) {
+      const term = search.toLowerCase();
+      const tags = 'tags' in portal ? portal.tags : [];
+      if (
+        !portal.name.toLowerCase().includes(term) &&
+        !portal.description?.toLowerCase().includes(term) &&
+        !portal.url.toLowerCase().includes(term) &&
+        !tags.some(tag => tag.toLowerCase().includes(term))
+      ) {
+        return false;
+      }
+    }
+
+    // Tags filter
+    if (filter.tags && filter.tags.length > 0 && 'tags' in portal) {
+      if (!filter.tags.some(tag => portal.tags.includes(tag))) {
+        return false;
+      }
+    }
+
+    // Favorite filter
+    if (filter.isFavorite !== undefined && portal.isFavorite !== filter.isFavorite) {
+      return false;
+    }
+
+    // Public filter
+    if (filter.isPublic !== undefined && 'isPublic' in portal && portal.isPublic !== filter.isPublic) {
+      return false;
+    }
+
+    // Has incidents filter
+    if (filter.hasIncidents !== undefined) {
+      const hasIncident = 'lastIncident' in portal
+        ? portal.lastIncident !== undefined
+        : ('incidentCount' in portal ? portal.incidentCount && portal.incidentCount > 0 : false);
+      if (hasIncident !== filter.hasIncidents) {
+        return false;
+      }
     }
 
     return true;
   });
 };
 
-export const calculatePortalStats = (portals: PortalResponse[]): PortalStats => {
+/**
+ * Comprehensive portal statistics calculation
+ * Supports both PortalResponse and Portal types
+ */
+export const calculatePortalStats = <T extends PortalResponse | Portal>(
+  portals: T[]
+): PortalStats => {
   const stats: PortalStats = {
     total: portals.length,
-    online: 0,
-    offline: 0,
+    operational: 0,
     degraded: 0,
     maintenance: 0,
-    byCategory: {},
-    byEnvironment: {},
+    outage: 0,
+    byCategory: {} as Record<PortalCategory, number>,
+    byEnvironment: {} as Record<PortalEnvironment, number>,
+    byPriority: {} as Record<PortalPriority, number>,
     averageUptime: 0,
     averageResponseTime: 0
   };
 
+  // Initialize category counts
+  Object.values(PortalCategory).forEach(cat => {
+    stats.byCategory[cat] = 0;
+  });
+
+  // Initialize environment counts
+  Object.values(PortalEnvironment).forEach(env => {
+    stats.byEnvironment[env] = 0;
+  });
+
+  // Initialize priority counts
+  Object.values(PortalPriority).forEach(pri => {
+    stats.byPriority[pri] = 0;
+  });
+
+  // Calculate statistics
   let totalUptime = 0;
   let totalResponseTime = 0;
+  let uptimeCount = 0;
   let responseTimeCount = 0;
 
   portals.forEach(portal => {
-    // Status counts
+    // Status counts - handle different naming conventions
     switch (portal.status) {
-      case PortalStatus.Online:
-        stats.online++;
+      case PortalStatus.OPERATIONAL:
+      case PortalStatus.Operational:
+        stats.operational++;
         break;
-      case PortalStatus.Offline:
-        stats.offline++;
-        break;
+      case PortalStatus.DEGRADED:
       case PortalStatus.Degraded:
         stats.degraded++;
         break;
+      case PortalStatus.MAINTENANCE:
       case PortalStatus.Maintenance:
         stats.maintenance++;
         break;
+      case PortalStatus.OUTAGE:
+      case PortalStatus.Outage:
+        stats.outage++;
+        break;
     }
 
-    // Category counts
+    // Category, environment, and priority counts
     if (portal.category) {
-      stats.byCategory[portal.category] = (stats.byCategory[portal.category] || 0) + 1;
+      stats.byCategory[portal.category]++;
     }
-
-    // Environment counts
     if (portal.environment) {
-      stats.byEnvironment[portal.environment] = (stats.byEnvironment[portal.environment] || 0) + 1;
+      stats.byEnvironment[portal.environment]++;
+    }
+    if ('priority' in portal && portal.priority) {
+      stats.byPriority[portal.priority]++;
     }
 
-    // Metrics
+    // Metrics calculation
     if (portal.metrics) {
-      if (portal.metrics.uptime !== undefined) {
+      if (portal.metrics.uptime !== undefined && portal.metrics.uptime !== null) {
         totalUptime += portal.metrics.uptime;
+        uptimeCount++;
       }
-      if (portal.metrics.responseTime !== undefined) {
+      if (portal.metrics.responseTime !== undefined && portal.metrics.responseTime !== null) {
         totalResponseTime += portal.metrics.responseTime;
         responseTimeCount++;
       }
     }
   });
 
-  if (portals.length > 0) {
-    stats.averageUptime = totalUptime / portals.length;
+  // Calculate averages
+  if (uptimeCount > 0) {
+    stats.averageUptime = totalUptime / uptimeCount;
   }
-
   if (responseTimeCount > 0) {
     stats.averageResponseTime = totalResponseTime / responseTimeCount;
   }
@@ -182,9 +266,9 @@ export const groupPortalsByEnvironment = (
 
 export const getPortalStatusColor = (status: PortalStatus): string => {
   switch (status) {
-    case PortalStatus.Online:
+    case PortalStatus.Operational:
       return 'green';
-    case PortalStatus.Offline:
+    case PortalStatus.Outage:
       return 'red';
     case PortalStatus.Degraded:
       return 'yellow';
@@ -198,9 +282,9 @@ export const getPortalStatusColor = (status: PortalStatus): string => {
 
 export const getPortalStatusIcon = (status: PortalStatus): string => {
   switch (status) {
-    case PortalStatus.Online:
+    case PortalStatus.Operational:
       return '✅';
-    case PortalStatus.Offline:
+    case PortalStatus.Outage:
       return '❌';
     case PortalStatus.Degraded:
       return '⚠️';
@@ -231,7 +315,7 @@ export const calculateHealthScore = (portal: PortalResponse): number => {
 
   // Status impact
   switch (portal.status) {
-    case PortalStatus.Offline:
+    case PortalStatus.Outage:
       score -= 50;
       break;
     case PortalStatus.Degraded:

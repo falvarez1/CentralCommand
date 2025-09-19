@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { AppNotification } from "../types/notification.types";
+type Notification = AppNotification;
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { v4 as uuidv4 } from 'uuid';
@@ -450,4 +452,4 @@ export const useUIStore = create<UIState>()(
 );
 
 // Export types
-export { ViewMode, Theme };
+export type { UIState, ViewMode, Theme };

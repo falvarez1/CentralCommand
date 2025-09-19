@@ -1,14 +1,17 @@
-import { apiClient } from '../lib/api/client';
+import type { AxiosInstance } from 'axios';
 import type {
   IncidentResponse,
   IncidentCreateRequest,
   IncidentUpdateRequest,
-  CommentResponse,
-  PagedResult
-} from '../types/api';
+  CommentResponse
+} from '../types/service.types';
+import type { PagedResult } from '../types/api.types';
+import type { IIncidentService } from './interfaces/IIncidentService';
 
-export class IncidentService {
+export class IncidentService implements IIncidentService {
   private readonly basePath = '/api/incidents';
+
+  constructor(private readonly apiClient: AxiosInstance) {}
 
   async getIncidents(params?: {
     page?: number;
@@ -17,27 +20,27 @@ export class IncidentService {
     priority?: string;
     search?: string;
   }): Promise<PagedResult<IncidentResponse>> {
-    const { data } = await apiClient.get<PagedResult<IncidentResponse>>(this.basePath, { params });
+    const { data } = await this.apiClient.get<PagedResult<IncidentResponse>>(this.basePath, { params });
     return data;
   }
 
   async getIncidentById(id: string): Promise<IncidentResponse> {
-    const { data } = await apiClient.get<IncidentResponse>(`${this.basePath}/${id}`);
+    const { data } = await this.apiClient.get<IncidentResponse>(`${this.basePath}/${id}`);
     return data;
   }
 
   async createIncident(incident: IncidentCreateRequest): Promise<IncidentResponse> {
-    const { data } = await apiClient.post<IncidentResponse>(this.basePath, incident);
+    const { data } = await this.apiClient.post<IncidentResponse>(this.basePath, incident);
     return data;
   }
 
   async updateIncident(id: string, incident: IncidentUpdateRequest): Promise<IncidentResponse> {
-    const { data } = await apiClient.put<IncidentResponse>(`${this.basePath}/${id}`, incident);
+    const { data } = await this.apiClient.put<IncidentResponse>(`${this.basePath}/${id}`, incident);
     return data;
   }
 
   async deleteIncident(id: string): Promise<void> {
-    await apiClient.delete(`${this.basePath}/${id}`);
+    await this.apiClient.delete(`${this.basePath}/${id}`);
   }
 
   async addComment(incidentId: string, comment: {
@@ -45,7 +48,7 @@ export class IncidentService {
     author: string;
     isInternal?: boolean;
   }): Promise<CommentResponse> {
-    const { data } = await apiClient.post<CommentResponse>(
+    const { data } = await this.apiClient.post<CommentResponse>(
       `${this.basePath}/${incidentId}/comments`,
       comment
     );
@@ -53,14 +56,14 @@ export class IncidentService {
   }
 
   async getComments(incidentId: string): Promise<CommentResponse[]> {
-    const { data } = await apiClient.get<CommentResponse[]>(
+    const { data } = await this.apiClient.get<CommentResponse[]>(
       `${this.basePath}/${incidentId}/comments`
     );
     return data;
   }
 
   async resolveIncident(id: string, resolution: string): Promise<IncidentResponse> {
-    const { data } = await apiClient.post<IncidentResponse>(
+    const { data } = await this.apiClient.post<IncidentResponse>(
       `${this.basePath}/${id}/resolve`,
       { resolution }
     );
@@ -68,7 +71,7 @@ export class IncidentService {
   }
 
   async reopenIncident(id: string, reason: string): Promise<IncidentResponse> {
-    const { data } = await apiClient.post<IncidentResponse>(
+    const { data } = await this.apiClient.post<IncidentResponse>(
       `${this.basePath}/${id}/reopen`,
       { reason }
     );
@@ -76,7 +79,7 @@ export class IncidentService {
   }
 
   async assignIncident(id: string, assignee: string): Promise<IncidentResponse> {
-    const { data } = await apiClient.post<IncidentResponse>(
+    const { data } = await this.apiClient.post<IncidentResponse>(
       `${this.basePath}/${id}/assign`,
       { assignee }
     );
@@ -84,4 +87,7 @@ export class IncidentService {
   }
 }
 
-export const incidentService = new IncidentService();
+// Factory function to create service instance with dependency injection
+export const createIncidentService = (apiClient: AxiosInstance): IIncidentService => {
+  return new IncidentService(apiClient);
+};

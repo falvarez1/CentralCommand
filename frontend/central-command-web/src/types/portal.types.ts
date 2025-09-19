@@ -126,7 +126,7 @@ export const PortalSchema = z.object({
   statusReason: z.string().max(500).optional().nullable(),
 
   // Configuration
-  config: PortalConfigSchema.default({}),
+  config: PortalConfigSchema.optional().default(() => ({ healthCheckInterval: 30, timeout: 5000, retryAttempts: 3, retryDelay: 1000, enableMonitoring: true, enableAlerts: true, enableAutoRecovery: false })),
 
   // UI properties
   icon: z.string().optional().nullable(),

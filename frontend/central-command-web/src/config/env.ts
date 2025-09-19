@@ -4,12 +4,12 @@ import { z } from 'zod';
 const envSchema = z.object({
   VITE_API_BASE_URL: z.string().url().default('http://localhost:5000'),
   VITE_MOCK_API_URL: z.string().url().default('http://localhost:5001'),
-  VITE_API_TIMEOUT: z.string().transform(Number).default('30000'),
-  VITE_ENABLE_MOCK_API: z.string().transform(val => val === 'true').default('false'),
+  VITE_API_TIMEOUT: z.string().default('30000').transform(Number),
+  VITE_ENABLE_MOCK_API: z.string().default('false').transform(val => val === 'true'),
   VITE_SIGNALR_HUB_URL: z.string().url().default('http://localhost:5000/hubs/metrics'),
-  VITE_SIGNALR_RECONNECT_INTERVAL: z.string().transform(Number).default('5000'),
-  VITE_ENABLE_REALTIME_UPDATES: z.string().transform(val => val === 'true').default('true'),
-  VITE_ENABLE_ERROR_REPORTING: z.string().transform(val => val === 'true').default('true'),
+  VITE_SIGNALR_RECONNECT_INTERVAL: z.string().default('5000').transform(Number),
+  VITE_ENABLE_REALTIME_UPDATES: z.string().default('true').transform(val => val === 'true'),
+  VITE_ENABLE_ERROR_REPORTING: z.string().default('true').transform(val => val === 'true'),
 });
 
 // Parse and validate environment variables

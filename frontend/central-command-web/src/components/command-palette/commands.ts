@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
+import { NotificationType, NotificationPriority } from "@/types/notification.types";
+import type { UIState } from "@/stores/useUIStore";
 import {
   CommandCategory,
   CommandActionType,
@@ -55,12 +57,12 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
       break;
 
     case CommandActionType.OPEN_MODAL:
-      uiStore.openModal(action.modal);
+      uiStore.openModal(action.modal as keyof UIState["modals"]);
       break;
 
     case CommandActionType.CLOSE_MODAL:
       if (action.modal) {
-        uiStore.closeModal(action.modal);
+        uiStore.closeModal(action.modal as keyof UIState["modals"]);
       } else {
         uiStore.closeAllModals();
       }
@@ -72,7 +74,7 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         uiStore.setTheme(newTheme);
       } else if (action.setting === 'view') {
-        const currentView = uiStore.view;
+        const currentView = uiStore.currentView;
         const newView = currentView === 'grid' ? 'list' : 'grid';
         uiStore.setView(newView);
       } else if (action.setting === 'sidebar') {
@@ -98,17 +100,17 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
         if (action.target === 'all' || !action.target) {
           await Promise.all([
             portalStore.updateAllMetrics(),
-            incidentStore.fetchIncidents(),
-            statsStore.updateStats()
+            // Incidents loaded via service layer,
+            statsStore.updateSystemStats()
           ]);
         } else if (action.target === 'portals') {
           await portalStore.updateAllMetrics();
         } else if (action.target === 'incidents') {
-          await incidentStore.fetchIncidents();
+          // Incidents are loaded via service layer
         } else if (action.target === 'stats') {
-          await statsStore.updateStats();
+          await statsStore.updateSystemStats();
         }
-        uiStore.showToast('success', 'Data Refreshed', 'All data has been updated');
+        uiStore.showToast(NotificationType.SUCCESS, 'Data Refreshed', 'All data has been updated');
       } finally {
         uiStore.setGlobalLoading(false);
       }
@@ -117,7 +119,7 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
     case CommandActionType.EXPORT:
       const data = action.data === 'portals' ? portalStore.portals :
                    action.data === 'incidents' ? incidentStore.incidents :
-                   action.data === 'stats' ? statsStore.getStats() :
+                   action.data === 'stats' ? statsStore.systemStats :
                    { portals: portalStore.portals, incidents: incidentStore.incidents };
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -127,15 +129,15 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
       a.download = `${action.data || 'data'}-${Date.now()}.${action.format}`;
       a.click();
       URL.revokeObjectURL(url);
-      uiStore.showToast('success', 'Export Complete', `Data exported successfully`);
+      uiStore.showToast(NotificationType.SUCCESS, 'Export Complete', `Data exported successfully`);
       break;
 
     case CommandActionType.SEARCH:
-      uiStore.setSearchQuery(action.query);
+      uiStore.setSearchTerm(action.query);
       if (action.scope === 'portals') {
-        portalStore.setSearchQuery(action.query);
+        portalStore.setSearchTerm(action.query);
       } else if (action.scope === 'incidents') {
-        incidentStore.setSearchQuery(action.query);
+        incidentStore.setFilter({ searchTerm: action.query });
       }
       // Focus search input
       setTimeout(() => {
@@ -151,7 +153,7 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
       switch (action.command) {
         case 'deploy':
           if (window.confirm('Deploy all services?')) {
-            uiStore.showToast('info', 'Deployment Started', 'Deploying all services...');
+            uiStore.showToast(NotificationType.INFO, 'Deployment Started', 'Deploying all services...');
             // Implement actual deployment
           }
           break;
@@ -159,20 +161,34 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
           uiStore.setGlobalLoading(true, 'Running health checks...');
           await statsStore.runAllHealthChecks();
           uiStore.setGlobalLoading(false);
-          uiStore.showToast('success', 'Health Check Complete', 'All systems operational');
+          uiStore.showToast(NotificationType.SUCCESS, 'Health Check Complete', 'All systems operational');
           break;
         case 'maintenance':
-          uiStore.openModal('scheduleMaintenance');
+          // TODO: Add scheduleMaintenance modal
+        uiStore.addNotification({
+          type: NotificationType.INFO,
+          title: 'Schedule Maintenance',
+          message: 'Maintenance scheduling feature coming soon',
+          priority: NotificationPriority.MEDIUM,
+          channels: [],
+          persistent: false,
+          autoClose: true,
+          autoCloseDelay: 5000,
+          actions: [],
+          dismissed: false,
+          tags: [],
+          broadcast: false
+        });
           break;
         case 'shutdown':
           if (window.confirm('Emergency shutdown of non-critical services?')) {
-            uiStore.showToast('warning', 'Emergency Shutdown', 'Shutting down non-critical services...');
+            uiStore.showToast(NotificationType.WARNING, 'Emergency Shutdown', 'Shutting down non-critical services...');
             // Implement actual shutdown
           }
           break;
         case 'restart':
           if (window.confirm('Restart all services?')) {
-            uiStore.showToast('info', 'Restart Initiated', 'Restarting all services...');
+            uiStore.showToast(NotificationType.INFO, 'Restart Initiated', 'Restarting all services...');
             // Implement actual restart
           }
           break;
@@ -183,7 +199,7 @@ export const executeCommandAction = async (command: ExtendedCommand) => {
       if (action.entity === 'portal') {
         uiStore.openModal('addPortal');
       } else if (action.entity === 'incident') {
-        uiStore.openModal('createIncident');
+        uiStore.openModal('viewIncidents');
       }
       break;
 
@@ -667,7 +683,7 @@ export const getDefaultCommands = (): ExtendedCommand[] => [
     },
     handler: () => {
       console.log('Starting tutorial...');
-      useUIStore.getState().showToast('info', 'Tutorial', 'Starting interactive tutorial...');
+      useUIStore.getState().showToast(NotificationType.INFO, 'Tutorial', 'Starting interactive tutorial...');
       // Implement tutorial
     },
     icon: 'GraduationCap',
@@ -723,7 +739,7 @@ export const getDefaultCommands = (): ExtendedCommand[] => [
  */
 export const generateCategoryFilterCommands = (): ExtendedCommand[] => {
   return Object.values(PortalCategory)
-    .filter(category => category !== PortalCategory.ALL)
+    .filter(category => category !== PortalCategory.All)
     .map(category => ({
       id: uuidv4(),
       name: `Filter: ${category}`,
@@ -767,7 +783,7 @@ export const generateTimeRangeCommands = (): ExtendedCommand[] => {
     },
     handler: () => {
       useUIStore.getState().setTimeRange(range.value);
-      useUIStore.getState().showToast('success', 'Time Range Updated', `Showing data for ${range.label}`);
+      useUIStore.getState().showToast(NotificationType.SUCCESS, 'Time Range Updated', `Showing data for ${range.label}`);
     },
     icon: 'Clock',
     searchTerms: ['time', 'range', 'period', range.label.toLowerCase()],

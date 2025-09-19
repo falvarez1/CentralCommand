@@ -1,73 +1,173 @@
-import type { IncidentResponse } from '@/types/api';
-import { IncidentStatus, IncidentPriority, IncidentType, IncidentSeverity } from '@/types/api';
+import type { IncidentResponse } from '../types/service.types';
+import {
+  IncidentStatus,
+  IncidentPriority,
+  IncidentType,
+  IncidentSeverity,
+  Incident,
+  IncidentFilter,
+  IncidentStats
+} from '../types/incident.types';
 
-export interface IncidentFilter {
-  status?: IncidentStatus;
-  priority?: IncidentPriority;
-  type?: IncidentType;
-  severity?: IncidentSeverity;
-  assignee?: string;
-  search?: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-}
-
-export interface IncidentStats {
-  total: number;
-  open: number;
-  inProgress: number;
-  resolved: number;
-  closed: number;
-  critical: number;
-  high: number;
-  medium: number;
-  low: number;
-  averageResolutionTime: number;
-}
-
-export const filterIncidents = (
-  incidents: IncidentResponse[],
+/**
+ * Comprehensive incident filtering with multiple criteria
+ * Handles both IncidentResponse (from API) and Incident (from store) types
+ */
+export const filterIncidents = <T extends IncidentResponse | Incident>(
+  incidents: T[],
   filter: IncidentFilter
-): IncidentResponse[] => {
+): T[] => {
   return incidents.filter(incident => {
-    if (filter.status && incident.status !== filter.status) return false;
-    if (filter.priority && incident.priority !== filter.priority) return false;
-    if (filter.type && incident.type !== filter.type) return false;
-    if (filter.severity && incident.severity !== filter.severity) return false;
-    if (filter.assignee && incident.assignedTo !== filter.assignee) return false;
-
-    if (filter.search) {
-      const searchLower = filter.search.toLowerCase();
-      const matchesSearch =
-        incident.title.toLowerCase().includes(searchLower) ||
-        incident.description?.toLowerCase().includes(searchLower) ||
-        incident.incidentNumber.toLowerCase().includes(searchLower);
-      if (!matchesSearch) return false;
+    // Status filter - handle both single and array
+    if (filter.status) {
+      const statusArray = Array.isArray(filter.status) ? filter.status : [filter.status];
+      if (statusArray.length > 0 && !statusArray.includes(incident.status)) {
+        return false;
+      }
     }
 
-    if (filter.dateFrom && new Date(incident.createdAt) < filter.dateFrom) return false;
-    if (filter.dateTo && new Date(incident.createdAt) > filter.dateTo) return false;
+    // Type filter - handle both single and array
+    if (filter.type) {
+      const typeArray = Array.isArray(filter.type) ? filter.type : [filter.type];
+      if (typeArray.length > 0 && !typeArray.includes(incident.type)) {
+        return false;
+      }
+    }
+
+    // Severity filter - handle both single and array
+    if (filter.severity) {
+      const severityArray = Array.isArray(filter.severity) ? filter.severity : [filter.severity];
+      if (severityArray.length > 0 && !severityArray.includes(incident.severity)) {
+        return false;
+      }
+    }
+
+    // Priority filter (if exists in the incident type)
+    if (filter.priority && 'priority' in incident) {
+      const priorityArray = Array.isArray(filter.priority) ? filter.priority : [filter.priority];
+      if (priorityArray.length > 0 && !priorityArray.includes(incident.priority)) {
+        return false;
+      }
+    }
+
+    // Date range filter
+    if (filter.dateRange) {
+      const incidentDate = 'createdAt' in incident
+        ? (incident.createdAt instanceof Date ? incident.createdAt.getTime() : new Date(incident.createdAt).getTime())
+        : new Date(incident.createdAt).getTime();
+
+      if (filter.dateRange.from && incidentDate < filter.dateRange.from.getTime()) {
+        return false;
+      }
+      if (filter.dateRange.to && incidentDate > filter.dateRange.to.getTime()) {
+        return false;
+      }
+    }
+
+    // Search term filter
+    const searchTerm = filter.searchTerm;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const tags = 'tags' in incident ? incident.tags : [];
+      const incidentNumber = 'incidentNumber' in incident ? incident.incidentNumber : '';
+
+      if (
+        !incident.title.toLowerCase().includes(term) &&
+        !incident.description.toLowerCase().includes(term) &&
+        !incidentNumber.toLowerCase().includes(term) &&
+        !tags.some(tag => tag.toLowerCase().includes(term))
+      ) {
+        return false;
+      }
+    }
+
+    // Assignee filter
+    if (filter.assignee) {
+      const assigneeField = 'assignee' in incident ? incident.assignee :
+                           ('assignedTo' in incident ? incident.assignedTo : undefined);
+      if (assigneeField !== filter.assignee) {
+        return false;
+      }
+    }
+
+    // Team filter
+    if (filter.team && 'team' in incident && incident.team !== filter.team) {
+      return false;
+    }
+
+    // Affected portal filter
+    if (filter.affectedPortal) {
+      const affectedPortals = 'affectedPortals' in incident ? incident.affectedPortals :
+                             ('portalId' in incident ? [incident.portalId] : []);
+      if (!affectedPortals.includes(filter.affectedPortal)) {
+        return false;
+      }
+    }
+
+    // Tags filter
+    if (filter.tags && filter.tags.length > 0 && 'tags' in incident) {
+      if (!filter.tags.some(tag => incident.tags.includes(tag))) {
+        return false;
+      }
+    }
+
+    // Unresolved filter
+    if (filter.isUnresolved && incident.status === IncidentStatus.Resolved) {
+      return false;
+    }
+
+    // Public filter
+    if (filter.isPublic !== undefined && 'isPublic' in incident && incident.isPublic !== filter.isPublic) {
+      return false;
+    }
 
     return true;
   });
 };
 
-export const calculateIncidentStats = (incidents: IncidentResponse[]): IncidentStats => {
+/**
+ * Comprehensive incident statistics calculation
+ * Supports both IncidentResponse and Incident types
+ */
+export const calculateIncidentStats = <T extends IncidentResponse | Incident>(
+  incidents: T[]
+): IncidentStats => {
+  const now = new Date();
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
   const stats: IncidentStats = {
     total: incidents.length,
     open: 0,
     inProgress: 0,
+    acknowledgedIncidents: 0,
     resolved: 0,
     closed: 0,
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0,
-    averageResolutionTime: 0
+    // Legacy aliases
+    investigating: 0,
+    acknowledged: 0,
+    bySeverity: {
+      [IncidentSeverity.Critical]: 0,
+      [IncidentSeverity.High]: 0,
+      [IncidentSeverity.Medium]: 0,
+      [IncidentSeverity.Low]: 0
+    },
+    byType: {} as Record<IncidentType, number>,
+    last24Hours: 0,
+    last7Days: 0,
+    averageMTTR: 0,
+    averageMTBF: 0
   };
 
-  let totalResolutionTime = 0;
-  let resolvedCount = 0;
+  // Initialize type counts
+  Object.values(IncidentType).forEach(type => {
+    stats.byType[type] = 0;
+  });
+
+  let totalMTTR = 0;
+  let mttrCount = 0;
+  let totalMTBF = 0;
+  let mtbfCount = 0;
 
   incidents.forEach(incident => {
     // Status counts
@@ -77,39 +177,65 @@ export const calculateIncidentStats = (incidents: IncidentResponse[]): IncidentS
         break;
       case IncidentStatus.InProgress:
         stats.inProgress++;
+        stats.investigating++;  // Legacy alias
+        break;
+      case IncidentStatus.Acknowledged:
+        stats.acknowledgedIncidents++;
+        stats.acknowledged++;  // Legacy alias
         break;
       case IncidentStatus.Resolved:
         stats.resolved++;
-        if (incident.resolvedAt) {
-          const resolutionTime = new Date(incident.resolvedAt).getTime() - new Date(incident.createdAt).getTime();
-          totalResolutionTime += resolutionTime;
-          resolvedCount++;
-        }
         break;
       case IncidentStatus.Closed:
         stats.closed++;
         break;
     }
 
-    // Priority counts
-    switch (incident.priority) {
-      case IncidentPriority.Critical:
-        stats.critical++;
-        break;
-      case IncidentPriority.High:
-        stats.high++;
-        break;
-      case IncidentPriority.Medium:
-        stats.medium++;
-        break;
-      case IncidentPriority.Low:
-        stats.low++;
-        break;
+    // Severity counts
+    stats.bySeverity[incident.severity]++;
+
+    // Type counts
+    stats.byType[incident.type]++;
+
+    // Time-based counts
+    const createdAt = incident.createdAt instanceof Date
+      ? incident.createdAt
+      : new Date(incident.createdAt);
+
+    if (createdAt > last24h) {
+      stats.last24Hours++;
+    }
+    if (createdAt > last7d) {
+      stats.last7Days++;
+    }
+
+    // Calculate MTTR (Mean Time To Resolution)
+    if (incident.status === IncidentStatus.Resolved && 'metrics' in incident) {
+      if (incident.metrics?.mttr) {
+        totalMTTR += incident.metrics.mttr;
+        mttrCount++;
+      } else if ('resolvedAt' in incident && incident.resolvedAt && 'acknowledgedAt' in incident && incident.acknowledgedAt) {
+        const resolvedAt = incident.resolvedAt instanceof Date ? incident.resolvedAt : new Date(incident.resolvedAt);
+        const acknowledgedAt = incident.acknowledgedAt instanceof Date ? incident.acknowledgedAt : new Date(incident.acknowledgedAt);
+        const mttr = Math.floor((resolvedAt.getTime() - acknowledgedAt.getTime()) / 60000);
+        totalMTTR += mttr;
+        mttrCount++;
+      }
+    }
+
+    // Calculate MTBF (Mean Time Between Failures)
+    if ('metrics' in incident && incident.metrics?.mtbf) {
+      totalMTBF += incident.metrics.mtbf;
+      mtbfCount++;
     }
   });
 
-  if (resolvedCount > 0) {
-    stats.averageResolutionTime = totalResolutionTime / resolvedCount;
+  // Calculate averages
+  if (mttrCount > 0) {
+    stats.averageMTTR = totalMTTR / mttrCount;
+  }
+  if (mtbfCount > 0) {
+    stats.averageMTBF = totalMTBF / mtbfCount;
   }
 
   return stats;
@@ -183,9 +309,9 @@ export const getIncidentPriorityIcon = (priority: IncidentPriority): string => {
   }
 };
 
-export const formatIncidentDuration = (startDate: string, endDate?: string): string => {
-  const start = new Date(startDate);
-  const end = endDate ? new Date(endDate) : new Date();
+export const formatIncidentDuration = (startDate: string | Date, endDate?: string | Date): string => {
+  const start = startDate instanceof Date ? startDate : new Date(startDate);
+  const end = endDate ? (endDate instanceof Date ? endDate : new Date(endDate)) : new Date();
   const duration = end.getTime() - start.getTime();
 
   const days = Math.floor(duration / (1000 * 60 * 60 * 24));
@@ -195,4 +321,41 @@ export const formatIncidentDuration = (startDate: string, endDate?: string): str
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+};
+
+/**
+ * Get active incidents (not resolved)
+ */
+export const getActiveIncidents = <T extends IncidentResponse | Incident>(
+  incidents: T[]
+): T[] => {
+  return incidents.filter(i => i.status !== IncidentStatus.Resolved && i.status !== IncidentStatus.Closed);
+};
+
+/**
+ * Get recent incidents (last 24 hours)
+ */
+export const getRecentIncidents = <T extends IncidentResponse | Incident>(
+  incidents: T[],
+  hours: number = 24
+): T[] => {
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+  return incidents.filter(i => {
+    const createdAt = i.createdAt instanceof Date ? i.createdAt : new Date(i.createdAt);
+    return createdAt > cutoff;
+  });
+};
+
+/**
+ * Sort incidents with proper date handling
+ */
+export const sortIncidentsByDate = <T extends IncidentResponse | Incident>(
+  incidents: T[],
+  order: 'asc' | 'desc' = 'desc'
+): T[] => {
+  return [...incidents].sort((a, b) => {
+    const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+    const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+    return order === 'desc' ? dateB - dateA : dateA - dateB;
+  });
 };

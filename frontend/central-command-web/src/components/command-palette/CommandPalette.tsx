@@ -172,7 +172,7 @@ export const CommandPalette: React.FC = () => {
 
   // Group commands by category
   const groupedCommands = useMemo(() => {
-    const groups: Record<CommandCategory, Command[]> = {} as any;
+    const groups: Record<CommandCategory | "recent" | "pinned", Command[]> = {} as any;
 
     // Initialize empty arrays for each category
     Object.values(CommandCategory).forEach(category => {
@@ -186,16 +186,21 @@ export const CommandPalette: React.FC = () => {
         .map(id => commands.find(c => c.id === id))
         .filter(Boolean) as Command[];
 
-      if (recentCommandObjects.length > 0) {
-        return {
-          recent: recentCommandObjects,
-          pinned: pinnedCommands.filter(c => !recentCommandObjects.some(r => r.id === c.id)),
-          ...groups
-        };
-      }
-
-      if (pinnedCommands.length > 0) {
-        return { pinned: pinnedCommands, ...groups };
+      if (recentCommandObjects.length > 0 || pinnedCommands.length > 0) {
+        const result: Record<string, Command[]> = {};
+        if (recentCommandObjects.length > 0) {
+          result.recent = recentCommandObjects;
+        }
+        if (pinnedCommands.length > 0) {
+          result.pinned = pinnedCommands.filter(c => !recentCommandObjects.some(r => r.id === c.id));
+        }
+        // Don't spread empty groups, only add non-empty categories
+        Object.entries(groups).forEach(([key, cmds]) => {
+          if (cmds.length > 0) {
+            result[key] = cmds;
+          }
+        });
+        return result as Record<CommandCategory | "recent" | "pinned", Command[]>;
       }
     }
 
@@ -295,10 +300,10 @@ export const CommandPalette: React.FC = () => {
         </CommandEmpty>
 
         {/* Recent Commands */}
-        {groupedCommands.recent && groupedCommands.recent.length > 0 && (
+        {groupedCommands["recent"] && groupedCommands["recent"].length > 0 && (
           <>
             <CommandGroup heading="Recent">
-              {groupedCommands.recent.map((command, index) => (
+                  {"recent" in groupedCommands && groupedCommands["recent"]?.map((command, index) => (
                 <CommandItem
                   key={command.id}
                   value={command.name}
@@ -333,10 +338,10 @@ export const CommandPalette: React.FC = () => {
         )}
 
         {/* Pinned Commands */}
-        {groupedCommands.pinned && groupedCommands.pinned.length > 0 && (
+        {groupedCommands["pinned"] && groupedCommands["pinned"].length > 0 && (
           <>
             <CommandGroup heading="Pinned">
-              {groupedCommands.pinned.map((command, index) => (
+                  {"pinned" in groupedCommands && groupedCommands["pinned"]?.map((command, index) => (
                 <CommandItem
                   key={command.id}
                   value={command.name}

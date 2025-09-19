@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { usePortalStore } from '../stores/usePortalStore';
 import { useUIStore } from '../stores/useUIStore';
 import { Portal, PortalFilter } from '../types/portal.types';
-import { portalService } from '../services/portal.service';
+import { usePortalService } from '../contexts/ServiceContext';
 import { toast } from 'sonner';
 
 /**
@@ -35,6 +35,8 @@ export function usePortals() {
     searchTerm,
     selectedTimeRange
   } = useUIStore();
+
+  const portalService = usePortalService();
 
   // Fetch portals from API
   const fetchPortals = async () => {

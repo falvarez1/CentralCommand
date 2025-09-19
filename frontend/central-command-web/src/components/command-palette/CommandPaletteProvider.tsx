@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import { useCommandStore } from '@/stores/useCommandStore';
 import { usePortalStore } from '@/stores/usePortalStore';
-import { Command, CommandActionType, CommandCategory } from '@/types/command.types';
+import { CommandActionType, CommandCategory } from '@/types/command.types';
 import { v4 as uuidv4 } from 'uuid';
 import { PortalStatus } from '@/types/portal.types';
 import CommandPalette from './CommandPalette';
@@ -204,11 +204,7 @@ export const CommandPaletteProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     const unsubscribe = usePortalStore.subscribe(
       (state) => state.portals,
-      () => {
-        // Debounce to avoid too many updates
-        const timer = setTimeout(registerDynamicCommands, 500);
-        return () => clearTimeout(timer);
-      }
+      registerDynamicCommands
     );
 
     return () => {

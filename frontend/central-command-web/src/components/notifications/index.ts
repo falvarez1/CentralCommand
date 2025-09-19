@@ -10,11 +10,14 @@ export {
   NotificationType,
   NotificationPriority,
   NotificationChannel,
-  NotificationActionType,
-  type Notification,
-  type NotificationAction,
-  type NotificationPreferences as NotificationPreferencesType,
-  type ToastNotification
+  NotificationActionType
+} from '../../types/notification.types';
+
+export type {
+  AppNotification as Notification,
+  AppNotificationAction as NotificationAction,
+  AppNotificationPreferences as NotificationPreferences,
+  ToastNotification
 } from '../../types/notification.types';
 
 // Re-export hooks

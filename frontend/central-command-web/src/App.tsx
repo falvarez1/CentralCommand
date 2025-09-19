@@ -10,19 +10,15 @@ import { IncidentsPage } from '@/pages/IncidentsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { useSignalR } from '@/hooks/useSignalR'
-import { usePortalStore } from '@/stores/usePortalStore'
-import { useIncidentStore } from '@/stores/useIncidentStore'
-import { env } from '@/config/env'
+// import { env } from '@/config/env' // Removed - not needed now
 
 // Initialize app with SignalR and API connections
 function AppInitializer({ children }: { children: React.ReactNode }) {
-  // Initialize stores with mock data
-  const initializePortals = usePortalStore(state => state.initialize)
-  const initializeIncidents = useIncidentStore(state => state.initialize)
+  // Stores will be initialized by hooks when components mount
 
   // Initialize SignalR connection for real-time updates
   const { isConnected } = useSignalR({
-    autoConnect: env.features.enableRealtimeUpdates,
+    autoConnect: true,
     onMetricUpdate: (update) => {
       console.log('Metric update received:', update);
     },
@@ -35,16 +31,12 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    // Initialize stores on mount
-    initializePortals()
-    initializeIncidents()
-
     // Log connection status in development
     if (import.meta.env.DEV) {
-      console.log('Stores initialized');
+      console.log('App initialized');
       console.log('SignalR connected:', isConnected);
     }
-  }, [])
+  }, [isConnected])
 
   return <>{children}</>
 }

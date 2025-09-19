@@ -72,25 +72,34 @@ export const MainContent: React.FC<MainContentProps> = ({
     if (systemStats) return systemStats;
 
     const operational = portals.filter(p => p.status === PortalStatus.Operational).length;
-    const totalRequests = portals.reduce((sum, p) => sum + (p.requests || 0), 0);
-    const totalErrors = portals.reduce((sum, p) => sum + (p.errors || 0), 0);
+    const totalRequests = portals.reduce((sum, p) => sum + (p.metrics?.requests || 0), 0);
+    const totalErrors = portals.reduce((sum, p) => sum + (p.metrics?.errors || 0), 0);
     const avgResponseTime = portals.length > 0
-      ? Math.round(portals.reduce((sum, p) => sum + (p.responseTime || 0), 0) / portals.length)
+      ? Math.round(portals.reduce((sum, p) => sum + (p.metrics?.responseTime || 0), 0) / portals.length)
       : 0;
     const avgUptime = portals.length > 0
-      ? parseFloat((portals.reduce((sum, p) => sum + (p.uptime || 0), 0) / portals.length).toFixed(2))
+      ? parseFloat((portals.reduce((sum, p) => sum + (p.metrics?.uptime || 0), 0) / portals.length).toFixed(2))
       : 0;
 
     return {
       totalPortals: portals.length,
       operationalPortals: operational,
+      activePortals: operational,
+      inactivePortals: portals.length - operational,
+      healthScore: avgUptime,
+      systemUptime: avgUptime,
+      averageResponseTime: avgResponseTime,
       totalRequests,
       totalErrors,
-      avgResponseTime,
-      avgUptime
-    };
+      errorRate: totalRequests > 0 ? (totalErrors / totalRequests) * 100 : 0,
+      throughput: 0,
+      latency: avgResponseTime,
+      timestamp: new Date(),
+      trend: [],
+      alerts: [],
+      incidents: []
+    } as SystemStats;
   }, [portals, systemStats]);
-
   const statCards: StatCard[] = [
     {
       title: 'Total Portals',
@@ -112,7 +121,7 @@ export const MainContent: React.FC<MainContentProps> = ({
     },
     {
       title: 'Avg Response',
-      value: `${isNaN(stats.avgResponseTime) ? 0 : stats.avgResponseTime}ms`,
+      value: `${isNaN(stats.averageResponseTime) ? 0 : stats.averageResponseTime}ms`,
       change: -12,
       changeLabel: 'vs last hour',
       icon: TrendingDown,

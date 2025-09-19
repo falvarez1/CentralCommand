@@ -3,12 +3,15 @@ import {
   Portal,
   CreatePortalInput,
   UpdatePortalInput,
+  BatchOperationResult
+} from '../../../types/portal.types';
+import {
   PortalResponse,
   PortalSummaryResponse,
   PortalHealthCheckResponse,
   PortalMetricsHistoryResponse,
-  BatchOperationResult
-} from '../../../types/portal.types';
+  PaginatedResponse
+} from '../../../types/service.types';
 import { PagedResult } from '../../../types/api.types';
 
 export const portalsService = {
@@ -119,3 +122,6 @@ export const portalsService = {
     return response.data;
   },
 };
+
+// Re-export convenience types
+export type { PaginatedResponse };

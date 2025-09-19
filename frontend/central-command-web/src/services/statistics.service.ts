@@ -1,26 +1,29 @@
-import { apiClient } from '../lib/api/client';
+import type { AxiosInstance } from 'axios';
 import type {
   DashboardStats,
   SystemMetrics,
   IncidentTrend,
   PortalHealthSummary
-} from '../types/api';
+} from '../types/service.types';
+import type { IStatisticsService } from './interfaces/IStatisticsService';
 
-export class StatisticsService {
+export class StatisticsService implements IStatisticsService {
   private readonly basePath = '/api/statistics';
 
+  constructor(private readonly apiClient: AxiosInstance) {}
+
   async getDashboardStats(): Promise<DashboardStats> {
-    const { data } = await apiClient.get<DashboardStats>(`${this.basePath}/dashboard`);
+    const { data } = await this.apiClient.get<DashboardStats>(`${this.basePath}/dashboard`);
     return data;
   }
 
   async getSystemMetrics(): Promise<SystemMetrics> {
-    const { data } = await apiClient.get<SystemMetrics>(`${this.basePath}/metrics`);
+    const { data } = await this.apiClient.get<SystemMetrics>(`${this.basePath}/metrics`);
     return data;
   }
 
   async getIncidentTrends(days: number = 30): Promise<IncidentTrend[]> {
-    const { data } = await apiClient.get<IncidentTrend[]>(
+    const { data } = await this.apiClient.get<IncidentTrend[]>(
       `${this.basePath}/incident-trends`,
       { params: { days } }
     );
@@ -28,7 +31,7 @@ export class StatisticsService {
   }
 
   async getPortalHealthSummary(): Promise<PortalHealthSummary> {
-    const { data } = await apiClient.get<PortalHealthSummary>(
+    const { data } = await this.apiClient.get<PortalHealthSummary>(
       `${this.basePath}/portal-health`
     );
     return data;
@@ -40,12 +43,12 @@ export class StatisticsService {
     entityType?: string;
     userId?: string;
   }): Promise<any> {
-    const { data } = await apiClient.get(`${this.basePath}/activity-log`, { params });
+    const { data } = await this.apiClient.get(`${this.basePath}/activity-log`, { params });
     return data;
   }
 
   async getPerformanceMetrics(timeRange: string = '24h'): Promise<any> {
-    const { data } = await apiClient.get(
+    const { data } = await this.apiClient.get(
       `${this.basePath}/performance`,
       { params: { timeRange } }
     );
@@ -53,7 +56,7 @@ export class StatisticsService {
   }
 
   async exportReport(format: 'pdf' | 'csv' | 'excel', params?: any): Promise<Blob> {
-    const { data } = await apiClient.get(
+    const { data } = await this.apiClient.get(
       `${this.basePath}/export`,
       {
         params: { format, ...params },
@@ -64,4 +67,7 @@ export class StatisticsService {
   }
 }
 
-export const statisticsService = new StatisticsService();
+// Factory function to create service instance with dependency injection
+export const createStatisticsService = (apiClient: AxiosInstance): IStatisticsService => {
+  return new StatisticsService(apiClient);
+};

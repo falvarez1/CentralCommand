@@ -22,7 +22,7 @@ import {
   IncidentStatus,
   CreateIncidentInput
 } from '../../types/incident.types';
-import { cn } from '../../lib/utils';
+// import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 
 interface CreateIncidentModalProps {
@@ -91,7 +91,7 @@ export const CreateIncidentModal: React.FC<CreateIncidentModalProps> = ({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0]) {
             fieldErrors[err.path[0].toString()] = err.message;
           }

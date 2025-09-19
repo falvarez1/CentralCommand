@@ -1,13 +1,14 @@
 import { api } from '../client';
 import {
-  Incident,
   CreateIncidentInput,
-  UpdateIncidentInput,
+  UpdateIncidentInput
+} from '../../../types/incident.types';
+import {
   IncidentResponse,
   IncidentSummaryResponse,
   CommentResponse,
   TimelineEntryResponse
-} from '../../../types/incident.types';
+} from '../../../types/service.types';
 import { PagedResult } from '../../../types/api.types';
 
 export const incidentsService = {

@@ -31,7 +31,8 @@ export enum CommandCategory {
   VIEW = 'view',
   DATA = 'data',
   SETTINGS = 'settings',
-  HELP = 'help'
+  HELP = 'help',
+  FILTER = 'filter'
 }
 
 /**

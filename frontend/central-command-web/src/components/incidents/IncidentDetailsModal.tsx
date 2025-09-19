@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle
 } from '../ui/dialog';
@@ -22,23 +21,18 @@ import {
   Info,
   CheckCircle,
   Clock,
-  Users,
   Server,
   MessageSquare,
   Activity,
   TrendingUp,
-  Link,
   FileText,
-  User,
-  Calendar,
   Zap,
   Shield,
   Database,
   Wifi,
   Lock,
   ChevronRight,
-  Edit,
-  X
+  Edit
 } from 'lucide-react';
 import { Incident, IncidentSeverity, IncidentStatus, IncidentType } from '../../types/incident.types';
 import { cn } from '../../lib/utils';

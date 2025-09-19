@@ -33,7 +33,7 @@ const severityConfig = {
     bgColor: 'bg-orange-50 dark:bg-orange-950',
     borderColor: 'border-orange-200 dark:border-orange-800',
     barColor: 'bg-orange-500',
-    badge: 'warning' as const
+    badge: 'secondary' as const
   },
   [IncidentSeverity.Medium]: {
     icon: AlertTriangle,
@@ -41,7 +41,7 @@ const severityConfig = {
     bgColor: 'bg-yellow-50 dark:bg-yellow-950',
     borderColor: 'border-yellow-200 dark:border-yellow-800',
     barColor: 'bg-yellow-500',
-    badge: 'warning' as const
+    badge: 'secondary' as const
   },
   [IncidentSeverity.Low]: {
     icon: Info,
